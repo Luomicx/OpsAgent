@@ -1,0 +1,43 @@
+# OpsAgent 默认配置
+# 密钥一律用 ${ENV_VAR} 占位，运行时从环境变量展开，不进版本库。
+
+model:
+  provider: deepseek
+  api_key: ${DEEPSEEK_API_KEY}
+  model: deepseek-chat
+  base_url: https://api.deepseek.com
+  temperature: 0.0
+  timeout: 60
+
+ssh:
+  default_user: root
+  port: 22
+  connect_timeout: 10
+  command_timeout: 15
+  pool_size: 5
+  # 单主机覆盖示例：
+  # hosts:
+  #   192.168.1.10:
+  #     user: ops
+  #     port: 2222
+  hosts: {}
+
+agent:
+  max_steps: 8
+  keep_recent: 20
+
+session:
+  # 事件流落盘路径（append-only JSONL）
+  path: .sessions/session.jsonl
+
+permission:
+  whitelist_only: true
+  layer1_blacklist:
+    extra_patterns: []
+    extra_literals: []
+  layer2_whitelist:
+    whitelist_only: true
+    extra_commands: []
+  layer3_shell_injection:
+    allow_pipes: true
+    allow_semicolon: false

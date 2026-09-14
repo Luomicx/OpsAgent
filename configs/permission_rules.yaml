@@ -1,0 +1,132 @@
+# 权限默认规则（可审计的规则快照）
+#
+# - 这里列出的 `patterns` / `literals` / `commands` 会**覆盖**代码内默认值；
+#   只想追加时用 `extra_*` 字段。
+# - 新增权限层时，必须在此登记默认规则，并在 README 的权限表中说明（AGENTS.md 4.3）。
+
+layer1_blacklist:
+  patterns:
+    - '\brm\s+-[a-z]*[rf]'
+    - '\brm\s+-[a-z]*\s+/(\s|$)'
+    - '\bdd\b.*\bif='
+    - '\bmkfs(\.[a-z0-9]+)?\b'
+    - '\b(fdisk|parted|wipefs|shred|truncate|swapon|mkswap)\b'
+    - '\b(shutdown|reboot|halt|poweroff)\b'
+    - '\binit\s+[06]\b'
+    - '\bsystemctl\s+(stop|disable|mask|reset-failed)\b'
+    - '\bservice\s+\S+\s+(stop|disable)\b'
+    - '\b(useradd|userdel|usermod|groupadd|passwd|chpasswd|visudo)\b'
+    - '\bchmod\b'
+    - '\bchown\b'
+    - '\bsudo\b'
+    - '\bsu\s'
+    - '\bkillall\b'
+    - '\bkill\s+-9\s+1\b'
+    - '\bcrontab\s+(-r|-e)\b'
+    - '/etc/ssh/sshd_config'
+    - ':\s*\(\s*\)\s*\{'
+    - '\b(curl|wget)\b.*\|\s*(sudo\s+)?(sh|bash|zsh|python)\b'
+    - '\|\s*(sudo\s+)?(sh|bash|zsh|python)\b'
+    - '\b(sh|bash|zsh|python|perl|ruby)\s+-c\b'
+    - '\b(eval|exec)\s'
+    - '>\s*/dev/(sd[a-z]|nvme|vd[a-z]|xvd[a-z])'
+    - '\bmv\s+/\s'
+    - '\biptables\b|\bufw\b|\bfirewall-cmd\b'
+    - '\bdocker\s+(rm|rmi|stop|kill|exec|run|prune)\b'
+    - '\bhistory\s+-c\b'
+  literals:
+    - 'rm -rf /'
+    - 'rm -rf /*'
+    - 'dd if=/dev/zero'
+    - 'chmod -r 777 /'
+    - 'mv / /dev/null'
+    - ':(){:|:&};:'
+  extra_patterns: []
+  extra_literals: []
+
+layer2_whitelist:
+  whitelist_only: true
+  commands:
+    - df
+    - du
+    - free
+    - ps
+    - pgrep
+    - pstree
+    - top
+    - htop
+    - uptime
+    - vmstat
+    - iostat
+    - mpstat
+    - sar
+    - nproc
+    - lscpu
+    - uname
+    - hostname
+    - hostnamectl
+    - whoami
+    - id
+    - date
+    - lsb_release
+    - printenv
+    - env
+    - which
+    - getconf
+    - ulimit
+    - timedatectl
+    - ls
+    - cat
+    - head
+    - tail
+    - grep
+    - egrep
+    - fgrep
+    - zgrep
+    - zcat
+    - awk
+    - sed
+    - wc
+    - sort
+    - uniq
+    - cut
+    - tr
+    - stat
+    - file
+    - find
+    - journalctl
+    - less
+    - more
+    - realpath
+    - readlink
+    - ss
+    - netstat
+    - ip
+    - ifconfig
+    - ping
+    - traceroute
+    - dig
+    - nslookup
+    - curl
+    - wget
+    - nc
+    - ethtool
+    - route
+    - arp
+    - lsblk
+    - blkid
+    - mount
+    - dmesg
+    - lsof
+    - sysctl
+    - swapon
+    - systemctl
+    - service
+    - docker
+    - kubectl
+    - crictl
+  extra_commands: []
+
+layer3_shell_injection:
+  allow_pipes: true
+  allow_semicolon: false

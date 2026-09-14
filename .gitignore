@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- 虚拟环境 ---
+.venv/
+venv/
+env/
+
+# --- 测试与类型检查缓存 ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+
+# --- 运行时产物 ---
+.sessions/
+*.jsonl
+
+# --- 工具与编辑器 ---
+.workbuddy/
+.workbuddy-ai/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- 本地配置（密钥不得入库）---
+configs/local.yaml
+configs/*.local.yaml
+.env
+.env.*
+!.env.example
