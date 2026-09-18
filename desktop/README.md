@@ -118,26 +118,56 @@ cd desktop/src-tauri
 
 cargo check            # 最快：只做类型检查，不产出二进制
 cargo check --message-format short   # 输出更紧凑，适合贴 CI 日志
-cargo build            # 编译 debug 二进制
-cargo build --release  # release（配了 lto + strip，明显更慢）
+
+cargo build            # 只编译 Rust —— 产物**不能独立运行**（见下）
+
+# 要得到可独立运行的产物，必须带上 custom-protocol，把前端资源嵌入二进制
+cargo build --features custom-protocol
+cargo build --release --features custom-protocol
 
 cargo clippy --all-targets   # 额外 lint（rustup component add clippy）
 cargo fmt                     # 格式化（rustup component add rustfmt）
 ```
 
-**注意**：单独 `cargo build` 只会编译出 `ops-agent-desktop` 可执行文件，
-它**不会**带上前端资源、也**不会**准备 Python 侧 —— 那些由 Tauri 的构建流程处理。
-所以按目的选工具：
+#### ⚠️ `custom-protocol` 是必须的
+
+Tauri 判断「前端资源从哪来」靠的是这个 feature：
+
+| 编译方式 | 前端来源 | 能独立运行吗 |
+| :--- | :--- | :--- |
+| `cargo build` | 运行期去连 `devUrl`（开发服务器） | ❌ 得到空白窗口 |
+| `cargo build --features custom-protocol` | **编译期嵌入**二进制 | ✅ |
+| `tauri build` | 同上（CLI 自动加该 feature） | ✅ |
+| `tauri dev` | 开发服务器 + 热重载 | ✅（开发用） |
+
+验证是否真的嵌进去了 —— 搜二进制里的**资源路径键**：
+
+```bash
+# 资源内容被 brotli 压缩过，所以搜不到原始界面文案（如「执行时间线」）；
+# 但资源路径键是明文，用它判断才可靠
+grep -qa "assets/index-" target/debug/ops-agent-desktop.exe \
+  && echo "已嵌入" || echo "未嵌入"
+```
+
+另一条更权威的判据是看 build script 有没有发 `dev` cfg：
+
+```bash
+grep -q "rustc-cfg=dev" target/debug/build/ops-agent-desktop-*/output \
+  && echo "dev 模式 → 未嵌入" || echo "prod 模式 → 已嵌入"
+```
+
+另外，无论哪种方式，`cargo build` 之前 `desktop/dist/` 都必须已存在
+（否则 `generate_context!` 会在编译期报找不到前端资源）。
+先跑一次 `npm run build` 或 `node node_modules/vite/bin/vite.js build` 生成它。
+
+#### 按目的选工具
 
 | 目的 | 用什么 |
 | :--- | :--- |
 | 验证 Rust 代码能编译 | `cargo check` |
-| 得到可运行的完整应用 | `npm run tauri:dev` / `tauri:build` |
-| 只要 Rust 侧 debug 二进制 | `cargo build` |
-
-`cargo build` 之前 `desktop/dist/` 必须已存在（否则 `generate_context!`
-会在编译期报找不到前端资源）。先跑一次 `npm run build` 或
-`node node_modules/vite/bin/vite.js build` 生成它。
+| 只要 Rust 侧 debug 二进制（不含前端） | `cargo build` |
+| 用 cargo 做出可运行产物 | `cargo build --features custom-protocol` |
+| 得到安装包（MSI / NSIS） | `npm run tauri:build` |
 
 ### Windows 上编译失败时
 
