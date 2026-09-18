@@ -229,27 +229,56 @@ desktop/
 ├── vite.config.ts
 ├── tsconfig.json
 ├── scripts/
-│   └── generate_icons.py        # 图标是生成产物，脚本可复现
+│   ├── generate_icons.py        # 应用图标是生成产物，脚本可复现
+│   ├── extract_icons.py         # 从设计稿提取图标精灵（单一事实来源是设计稿）
+│   ├── bundle_fonts.py          # 本地打包 Inter / JetBrains Mono（不依赖运行时联网）
+│   └── shoot.mjs                # 用 CDP 驱动无头 Chrome 做交互式截图校对
 ├── src/                         # 前端
-│   ├── main.tsx
-│   ├── App.tsx                  # 状态编排
+│   ├── main.tsx                 # 样式引入顺序：令牌 → 基础 → 组件 → 布局 → 各屏
+│   ├── App.tsx                  # 路由（hash）+ 连接状态 + 会话状态
 │   ├── components/
-│   │   ├── TopBar.tsx           # 顶栏：连接状态、适配器、事件数
-│   │   ├── Sidebar.tsx          # 主机/适配器配置、插件与工具清单
-│   │   ├── Timeline.tsx         # 实时事件流
-│   │   ├── PermissionPanel.tsx  # 三层规则浏览
-│   │   └── CommandChecker.tsx   # 命令校验器
+│   │   ├── chrome/WindowChrome.tsx   # 自绘标题栏（decorations:false，红黄绿点即窗口控制）
+│   │   ├── layout/AppShell.tsx       # PageHeader / Body / Rail / Card / Banner
+│   │   ├── layout/SideNav.tsx        # 222px 导航（监控/安全/基础设施 三组）
+│   │   ├── ui/IconSprite.tsx         # ⚠️ 自动生成，勿手改（来自设计稿）
+│   │   ├── ui/Icon.tsx               # <use href="#id">
+│   │   ├── ui/primitives.tsx         # Btn/Tag/Chip/Kpi/Bar/Field/Empty/…
+│   │   └── screens/                  # 12 屏 + 设置
+│   │       ├── BootScreen.tsx        # 01 启动握手
+│   │       ├── OverviewScreen.tsx    # 02 控制台总览
+│   │       ├── TimelineScreen.tsx    # 03 执行时间线（核心）
+│   │       ├── ReportScreen.tsx      # 04 会话报告
+│   │       ├── PermissionScreen.tsx  # 05 权限分层
+│   │       ├── CheckerScreen.tsx     # 06 命令校验器
+│   │       ├── AuditScreen.tsx       # 07 事件审计（可回放）
+│   │       ├── HostsScreen.tsx       # 08 目标主机
+│   │       ├── KernelScreen.tsx      # 09 内核插件拓扑
+│   │       ├── AdaptersScreen.tsx    # 10 模型适配器
+│   │       ├── RulesScreen.tsx       # 11 权限规则（可写，二次确认）
+│   │       ├── DisconnectedScreen.tsx# 12 后端断开
+│   │       └── SettingsScreen.tsx    # 设置（设计稿无画板，按同一语言补齐）
 │   ├── lib/
+│   │   ├── nav.ts               # 导航模型与路由
+│   │   ├── appCtx.ts            # 跨屏共享上下文
+│   │   ├── bridge.ts            # Tauri IPC 抽象（浏览器预览挂接点）
+│   │   ├── preview.ts           # ⚠️ 仅 DEV：浏览器预览用的替身后端
 │   │   ├── types.ts             # 与 Python serialize.py 一一对应
 │   │   ├── rpc.ts               # RPC 客户端（配对/分流/超时）
 │   │   ├── api.ts               # 业务方法封装
 │   │   ├── timeline.ts          # 事件 → 时间线（纯函数）
 │   │   └── config.ts            # localStorage 持久化
-│   └── styles/global.css        # 暗色主题
+│   ├── styles/
+│   │   ├── tokens.css           # 设计令牌（逐字来自设计稿）
+│   │   ├── fonts.css            # 本地打包字体（勿手改）
+│   │   ├── base.css             # 重置 / 滚动条 / .ic
+│   │   ├── components.css       # 通用组件（card/btn/tag/tbl/kpi/…）
+│   │   ├── layout.css           # 外壳几何（chrome 42 / side 222 / rail 296）
+│   │   └── screens/*.css        # 各屏专属
+│   └── assets/fonts/*.woff2     # Latin 字体子集
 └── src-tauri/                   # Rust 外壳
     ├── Cargo.toml
     ├── build.rs
-    ├── tauri.conf.json
+    ├── tauri.conf.json          # 1440×900 · decorations:false
     ├── capabilities/default.json
     ├── icons/
     └── src/
@@ -257,6 +286,33 @@ desktop/
         ├── lib.rs               # 命令注册 + 事件泵
         └── sidecar.rs           # 进程管理
 ```
+
+## 界面与设计稿的关系
+
+界面以 `design/console-ui.html`（12 个 1440×900 画板）为基准 **1:1 复刻**。
+复刻计划与逐屏规格见 [`docs/UI-REFACTOR-PLAN.md`](../docs/UI-REFACTOR-PLAN.md)。
+
+三条工程约定：
+
+1. **设计稿是唯一事实来源。** 颜色、圆角、间距逐值复制，不重新调；
+   图标精灵由 `scripts/extract_icons.py` 从设计稿生成。
+2. **数据分层标注。** 后端有的接真实数据；没有的（如 7 天趋势、会话索引）
+   在界面上标「示例」，绝不伪装成真实运行状态。
+3. **作用域隔离。** 局部样式一律用独立类名（如 `.cap-tag`），
+   禁止用「容器 + 通用类」—— 那会让通用类的作用域泄漏到整棵子树。
+
+### 浏览器预览（不必编译 Rust）
+
+```bash
+cd desktop && npm run dev        # http://localhost:5183
+```
+
+开发模式下 `lib/preview.ts` 会挂一个**替身后端**：模拟握手、按剧本推送事件、
+返回真实形态的权限/审计数据。所以不用跑 Python、不用跑 Rust，就能审阅全部 12 屏。
+
+- 只在 `import.meta.env.DEV` 且不在 Tauri 里生效，生产构建会被摇树移除
+- 未实现的后端方法会返回 `-32601` 并在界面**原样呈现**，不会假装成功
+- 想看「跑完一次诊断」的时间线：执行页填指令 → 发送（预览会按剧本推送 18 条事件）
 
 ## 设计取舍
 

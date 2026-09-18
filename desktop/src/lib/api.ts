@@ -5,7 +5,7 @@
  * 不需要知道 RPC 方法叫什么、参数是什么形状。
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./bridge";
 import { rpc } from "./rpc";
 import type {
   AgentResult,
@@ -62,6 +62,51 @@ export const api = {
    */
   cancel: (reason = "用户取消") =>
     rpc.call<{ cancelled: boolean; count: number }>("cancel", { reason }),
+
+  /* ------------------------------------------------------------------
+     规则写入（决策 1B —— 可写）
+     安全约束（见 docs/UI-REFACTOR-PLAN.md §7.4）：
+       1. 只写 configs/permission_rules.local.yaml，永不触碰默认规则文件
+       2. 调用前必须由 UI 做二次确认，并展示具体 diff
+       3. 后端写入时必须落审计事件
+       4. 保存后必须重载流水线并回报结果
+
+     ⚠️ 后端（Phase 4）尚未实现 rulesSave / rulesDiff。
+     当前调用会返回 -32601（METHOD_NOT_FOUND），UI 会**原样呈现该错误**，
+     不会静默假装保存成功。
+     ------------------------------------------------------------------ */
+
+  /** 变更预览：新增 / 修改 / 删除 + 校验结果 */
+  rulesDiff: (rules: RulesPayload) => rpc.call<RulesDiff>("rulesDiff", { rules }),
+
+  /** 确认写入 + 重载流水线 */
+  rulesSave: (rules: RulesPayload) => rpc.call<RulesSaveResult>("rulesSave", { rules }),
 };
+
+/** 提交给后端的规则形态（按层分组，只含可编辑字段） */
+export interface RulesPayload {
+  layers: {
+    layer: string;
+    rules: { pattern: string; kind: string; description: string }[];
+  }[];
+}
+
+export interface RulesDiff {
+  added: string[];
+  removed: string[];
+  changed: { pattern: string; before: string; after: string }[];
+  /** 后端对拟写入规则的静态校验结果 */
+  invalid: { pattern: string; reason: string }[];
+  targetFile: string;
+}
+
+export interface RulesSaveResult {
+  ok: boolean;
+  /** 生效的规则总数（重载后） */
+  totalRules: number;
+  /** 本次写入产生的审计事件 seq */
+  auditSeq?: number;
+  targetFile: string;
+}
 
 export type Api = typeof api;

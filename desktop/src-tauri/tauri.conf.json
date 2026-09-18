@@ -13,17 +13,18 @@
     "windows": [
       {
         "title": "OpsAgent · 只读运维诊断",
-        "width": 1360,
-        "height": 880,
-        "minWidth": 1080,
-        "minHeight": 680,
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1180,
+        "minHeight": 720,
         "resizable": true,
         "center": true,
-        "theme": "Dark"
+        "theme": "Dark",
+        "decorations": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
   "bundle": {

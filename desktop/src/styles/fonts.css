@@ -1,0 +1,6 @@
+/* 本地打包字体 —— 由 desktop/scripts/bundle_fonts.py 生成，勿手改。
+   桌面应用不应依赖运行时联网取字体，否则断网时字宽变化会破坏与设计稿的 1:1 对齐。
+   仅打包 Latin 子集；中文走系统字体（PingFang SC / Microsoft YaHei）。 */
+
+@font-face{font-family:'Inter';font-style:normal;font-weight:300 700;font-display:swap;src:url('../assets/fonts/inter-latin.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 600;font-display:swap;src:url('../assets/fonts/jbmono-latin.woff2') format('woff2');}

@@ -1,0 +1,110 @@
+/* ============================================================
+   基础样式：重置 / 字体 / 滚动条
+   ============================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* 桌面应用：窗口本身不滚动，只有内部面板滚动 */
+}
+
+body {
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t1);
+  background: var(--bg-1);
+  -webkit-font-smoothing: antialiased;
+  /* 桌面应用观感：默认不可选中，需要的地方用 .selectable 打开 */
+  user-select: none;
+  cursor: default;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+/* 图标：描边式，颜色继承 currentColor */
+.ic {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+  flex-shrink: 0;
+}
+.ic.s { width: 13px; height: 13px; }
+.ic.l { width: 20px; height: 20px; }
+.ic.xl { width: 26px; height: 26px; }
+
+/* 可选中区域：命令、日志、代码、表格数据 */
+.selectable,
+.mono {
+  user-select: text;
+  cursor: text;
+}
+
+/* 等宽 + 表格数字对齐 */
+.mono {
+  font-family: var(--mono);
+  font-variant-ligatures: none;
+}
+
+/* ---------------- 滚动条 ---------------- */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .10);
+  border-radius: 5px;
+  border: 2px solid var(--bg-1);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, .18);
+}
+
+/* 隐藏滚动条但保留可滚动（面板类容器用） */
+.noscroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.noscroll::-webkit-scrollbar {
+  display: none;
+}

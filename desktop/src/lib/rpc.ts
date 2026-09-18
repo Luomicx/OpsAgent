@@ -11,8 +11,8 @@
  * 上层 `api.ts` 才是业务封装。这样换协议只改这一层。
  */
 
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+// Tauri IPC 经由 bridge 间接调用，使浏览器预览可挂接替身实现
+import { invoke, listen, type UnlistenFn } from "./bridge";
 import type { InboundMessage, RpcNotification, RpcRequest, RpcResponse } from "./types";
 import { isNotification } from "./types";
 

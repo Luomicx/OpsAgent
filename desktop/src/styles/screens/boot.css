@@ -1,0 +1,115 @@
+/* ============================================================
+   启动页 / 空状态  —— 对应设计稿 01 与 12 屏
+   ============================================================ */
+
+/* ---------------- 启动 / 后端握手 ---------------- */
+.boot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(70% 46% at 50% 40%, rgba(109, 143, 255, .10), transparent 66%),
+    var(--bg-1);
+}
+/* 背景网格 + 径向遮罩，营造「正在启动」的技术感 */
+.boot .grid {
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .022) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(60% 50% at 50% 45%, #000, transparent 78%);
+  -webkit-mask-image: radial-gradient(60% 50% at 50% 45%, #000, transparent 78%);
+}
+.boot .in { position: relative; width: 520px; text-align: center; }
+
+.boot .mk {
+  width: 78px;
+  height: 78px;
+  border-radius: 20px;
+  margin: 0 auto 26px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(150deg, #1B2230, #0E1116);
+  border: 1px solid var(--line-2);
+  color: var(--ac);
+  box-shadow: 0 26px 50px -24px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .06);
+  animation: bmk 3.2s ease-in-out infinite;
+}
+@keyframes bmk {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+.boot h1 { font-size: 31px; font-weight: 600; letter-spacing: -.035em; }
+.boot h1 em { font-style: normal; color: var(--t3); font-weight: 400; }
+.boot .tg { font-size: 12.5px; color: var(--t3); margin-top: 9px; letter-spacing: .02em; }
+
+.steps { margin-top: 38px; display: flex; flex-direction: column; gap: 1px; text-align: left; }
+.stp {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  background: rgba(255, 255, 255, .014);
+  border: 1px solid transparent;
+}
+.stp.cur { background: var(--ac-bg); border-color: var(--ac-bd); }
+.stp .n { font-family: var(--mono); font-size: 11px; color: var(--t4); width: 26px; flex-shrink: 0; }
+.stp .tx { flex: 1; color: var(--t2); }
+.stp.done .tx { color: var(--t1); }
+.stp .ms { font-family: var(--mono); font-size: 10.5px; color: var(--t4); }
+
+.boot .ft {
+  position: absolute;
+  bottom: 34px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--t4);
+  letter-spacing: .06em;
+}
+
+.scan { height: 2px; margin-top: 30px; border-radius: 2px; background: rgba(255, 255, 255, .05); overflow: hidden; }
+.scan i {
+  display: block;
+  width: 34%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--ac), transparent);
+  animation: sc 1.7s cubic-bezier(.6, 0, .4, 1) infinite;
+}
+@keyframes sc {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(400%); }
+}
+
+/* ---------------- 空状态（含后端断开） ---------------- */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.empty .or {
+  width: 74px;
+  height: 74px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  color: var(--t3);
+}
+.empty h3 { font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+.empty p { font-size: 12.5px; color: var(--t3); margin-top: 9px; max-width: 460px; line-height: 1.75; }
