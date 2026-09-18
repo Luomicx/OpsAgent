@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpsAgent · 控制台 UI 设计方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   OpsAgent Console — Design System
+   深炭灰 · 克制 · 高信息密度运维控制台
+   ============================================================ */
+:root{
+  /* 基底：深炭灰，靠明度分层而非描边 */
+  --bg-0:#060708;
+  --bg-1:#0A0B0D;
+  --bg-2:#0F1114;
+  --bg-3:#14171B;
+  --bg-4:#1A1E23;
+  --bg-5:#22272E;
+
+  --line:rgba(255,255,255,.06);
+  --line-2:rgba(255,255,255,.10);
+  --line-3:rgba(255,255,255,.16);
+
+  --t1:#EDEFF2;   /* 主文字 */
+  --t2:#9BA1AC;   /* 次文字 */
+  --t3:#6B717C;   /* 弱文字 */
+  --t4:#4A4F58;   /* 极弱 / 占位 */
+
+  /* 强调色刻意收窄：全局只有一个交互强调色 */
+  --ac:#6D8FFF;
+  --ac-2:#8AA5FF;
+  --ac-bg:rgba(109,143,255,.12);
+  --ac-bd:rgba(109,143,255,.32);
+
+  /* 语义色只用于状态，不做装饰 */
+  --ok:#45B98D;
+  --ok-bg:rgba(69,185,141,.12);
+  --warn:#D8A43F;
+  --warn-bg:rgba(216,164,63,.12);
+  --bad:#D9635A;
+  --bad-bg:rgba(217,99,90,.12);
+  --info:#5AA9D6;
+  --info-bg:rgba(90,169,214,.12);
+  --pur:#9B7ED9;
+  --pur-bg:rgba(155,126,217,.12);
+
+  --r:10px; --r-sm:7px; --r-lg:14px;
+  --mono:'JetBrains Mono','Cascadia Code',Consolas,monospace;
+  --sans:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --sh:0 1px 2px rgba(0,0,0,.5);
+  --sh-2:0 24px 60px -30px rgba(0,0,0,.95);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:var(--sans);font-size:13px;line-height:1.5;
+  color:var(--t1);background:#050506;
+  background-image:
+    radial-gradient(60% 40% at 12% -6%,rgba(109,143,255,.07),transparent 60%),
+    radial-gradient(50% 36% at 92% 2%,rgba(155,126,217,.05),transparent 60%);
+  background-attachment:fixed;
+  padding:52px 48px 84px;-webkit-font-smoothing:antialiased;
+}
+/* ---------------- 看板头部 ---------------- */
+.bh{max-width:4600px;margin:0 auto 44px}
+.bh .eb{font-size:10px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--ac);margin-bottom:14px}
+.bh h1{font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1.12;margin-bottom:14px}
+.bh h1 em{font-style:normal;color:var(--ac)}
+.bh p{font-size:13.5px;color:var(--t2);max-width:900px;line-height:1.8}
+.sw{display:flex;gap:8px;margin-top:24px;flex-wrap:wrap}
+.sw span{display:flex;align-items:center;gap:8px;padding:7px 13px 7px 8px;border-radius:100px;
+  background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:10.5px;color:var(--t2);font-family:var(--mono)}
+.sw span i{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+/* ---------------- 画板网格：每行 3 屏 ---------------- */
+.board{max-width:4600px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.row{display:flex;gap:40px}
+.cap{flex:0 0 1440px;width:1440px}
+.cap-tag{display:flex;align-items:baseline;gap:9px;margin-top:16px;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--t3);font-weight:600}
+.cap-tag b{color:var(--ac);font-weight:700}
+.cap-tag .d{color:var(--t4);font-weight:400;letter-spacing:.02em;text-transform:none;font-size:11px}
+/* ---------------- 窗口外壳 ---------------- */
+.win{position:relative;width:1440px;height:900px;border-radius:12px;overflow:hidden;
+  background:var(--bg-1);border:1px solid var(--line-2);
+  box-shadow:var(--sh-2);
+  display:flex;flex-direction:column;
+  transition:transform .4s cubic-bezier(.4,0,.2,1),filter .4s cubic-bezier(.4,0,.2,1)}
+.win:hover{transform:translateY(-4px);filter:drop-shadow(0 34px 60px rgba(0,0,0,.85)) brightness(1.04)}
+.chrome{height:42px;flex:0 0 42px;display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:var(--bg-2);border-bottom:1px solid var(--line)}
+.lt{display:flex;gap:7px}
+.lt i{width:11px;height:11px;border-radius:50%;background:#2A2F36}
+.lt i.r{background:#3A2A2A}.lt i.y{background:#3A352A}.lt i.g{background:#2A3A31}
+.chrome .ti{font-size:11.5px;color:var(--t3);font-weight:500;letter-spacing:.01em}
+.chrome .ti b{color:var(--t2);font-weight:600}
+.chrome .sp{flex:1}
+.chrome .rt{display:flex;align-items:center;gap:8px}
+.app{flex:1;display:flex;min-height:0}
+/* ---------------- 侧边导航 ---------------- */
+.side{width:222px;flex:0 0 222px;background:var(--bg-2);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:12px 10px}
+.side .brand{display:flex;align-items:center;gap:10px;padding:8px 10px 16px}
+.side .brand .mk{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#1E2530,#141820);border:1px solid var(--line-2);color:var(--ac)}
+.side .brand .nm{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.side .brand .vr{font-size:9.5px;color:var(--t4);font-family:var(--mono);letter-spacing:.02em}
+.side .gl{font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--t4);padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);
+  color:var(--t2);font-size:12.5px;font-weight:500;position:relative;
+  transition:background .2s,color .2s}
+.ni:hover{background:rgba(255,255,255,.03);color:var(--t1)}
+.ni.on{background:rgba(109,143,255,.10);color:var(--t1)}
+.ni.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:2px;height:16px;border-radius:2px;background:var(--ac)}
+.ni .bdg{margin-left:auto;font-size:10px;font-family:var(--mono);color:var(--t3);
+  background:rgba(255,255,255,.05);padding:1px 6px;border-radius:100px}
+.ni .bdg.bad{color:var(--bad);background:var(--bad-bg)}
+.ni.dis{opacity:.4}
+.side .ft{margin-top:auto;padding:10px 10px 4px;border-top:1px solid var(--line)}
+/* ---------------- 主区 ---------------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-1);overflow:hidden}
+.rail{width:296px;flex:0 0 296px;background:var(--bg-2);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
+.rail::-webkit-scrollbar{display:none}
+.rail > *{flex-shrink:0}
+/* 页头 */
+.ph{display:flex;align-items:center;gap:14px;padding:18px 24px 14px;flex:0 0 auto}
+.ph h2{font-size:19px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.ph .sub{font-size:11.5px;color:var(--t3);margin-top:3px}
+.ph .sp{flex:1}
+.bd{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 24px 20px;display:flex;flex-direction:column;gap:14px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.bd::-webkit-scrollbar{display:none}
+.bd > *{flex-shrink:0}
+/* ---------------- 基础组件 ---------------- */
+.card{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  transition:transform .3s cubic-bezier(.4,0,.2,1),filter .3s ease,border-color .3s}
+.hv:hover{transform:translateY(-2px);filter:drop-shadow(0 14px 28px rgba(0,0,0,.6));border-color:var(--line-2)}
+.pad{padding:16px}
+.hd{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.hd h3{font-size:12.5px;font-weight:600;letter-spacing:-.005em}
+.hd .sp{flex:1}
+.lbl{font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t4)}
+.mono{font-family:var(--mono);font-variant-ligatures:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:32px;padding:0 13px;border-radius:var(--r-sm);font-size:12px;font-weight:550;
+  background:var(--bg-4);border:1px solid var(--line-2);color:var(--t1);
+  transition:background .2s,border-color .2s,transform .12s}
+.btn:hover{background:var(--bg-5);border-color:var(--line-3)}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#050A18;font-weight:650}
+.btn.pri:hover{background:var(--ac-2);border-color:var(--ac-2)}
+.btn.dg{color:var(--bad);border-color:rgba(217,99,90,.32);background:transparent}
+.btn.dg:hover{background:var(--bad-bg)}
+.btn.gh{background:transparent;border-color:var(--line)}
+.btn.gh:hover{background:rgba(255,255,255,.04);border-color:var(--line-2)}
+.btn.sm{height:26px;padding:0 10px;font-size:11px}
+.ib{width:30px;height:30px;border-radius:var(--r-sm);display:grid;place-items:center;
+  background:transparent;border:1px solid var(--line);color:var(--t2);transition:all .2s}
+.ib:hover{background:rgba(255,255,255,.05);color:var(--t1);border-color:var(--line-2)}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0}
+.ic.s{width:13px;height:13px}.ic.l{width:20px;height:20px}.ic.xl{width:26px;height:26px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:5px;
+  font-size:10.5px;font-weight:600;letter-spacing:.01em;border:1px solid transparent}
+.tag.ok{color:var(--ok);background:var(--ok-bg);border-color:rgba(69,185,141,.24)}
+.tag.bad{color:var(--bad);background:var(--bad-bg);border-color:rgba(217,99,90,.24)}
+.tag.warn{color:var(--warn);background:var(--warn-bg);border-color:rgba(216,164,63,.24)}
+.tag.info{color:var(--info);background:var(--info-bg);border-color:rgba(90,169,214,.24)}
+.tag.ac{color:var(--ac);background:var(--ac-bg);border-color:var(--ac-bd)}
+.tag.pur{color:var(--pur);background:var(--pur-bg);border-color:rgba(155,126,217,.24)}
+.tag.mut{color:var(--t3);background:rgba(255,255,255,.04);border-color:var(--line)}
+.chip{padding:5px 11px;border-radius:100px;font-size:11.5px;color:var(--t2);font-weight:500;
+  background:rgba(255,255,255,.03);border:1px solid var(--line);white-space:nowrap;transition:all .2s}
+.chip:hover{border-color:var(--line-2);color:var(--t1)}
+.chip.on{background:var(--ac-bg);border-color:var(--ac-bd);color:var(--ac-2)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px rgba(69,185,141,.7)}
+.dot.bad{background:var(--bad);box-shadow:0 0 8px rgba(217,99,90,.7)}
+.dot.warn{background:var(--warn);box-shadow:0 0 8px rgba(216,164,63,.7)}
+.dot.mut{background:var(--t4)}
+.breathe{animation:br 2.6s ease-in-out infinite}
+@keyframes br{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(69,185,141,.5)}50%{opacity:.75;box-shadow:0 0 0 5px rgba(69,185,141,0)}}
+/* 进度条 */
+.bar{height:5px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px;background:var(--ac);
+  animation:gw 1.3s cubic-bezier(.4,0,.2,1) both}
+.bar i.ok{background:var(--ok)}.bar i.bad{background:var(--bad)}.bar i.warn{background:var(--warn)}
+@keyframes gw{from{width:0!important}}
+/* 表格 */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--t4);padding:9px 12px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.012)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--t2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.018);color:var(--t1)}
+.tbl td.mono,.tbl td .mono{font-family:var(--mono);font-size:11.5px}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{padding:15px 16px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+  transition:transform .3s cubic-bezier(.4,0,.2,1),filter .3s ease,border-color .3s}
+.kpi:hover{transform:translateY(-2px);filter:drop-shadow(0 12px 24px rgba(0,0,0,.55));border-color:var(--line-2)}
+.kpi .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--t4)}
+.kpi .v{font-size:27px;font-weight:600;letter-spacing:-.035em;margin-top:7px;line-height:1;
+  font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:12px;color:var(--t3);font-weight:500;margin-left:3px;letter-spacing:0}
+.kpi .d{font-size:11px;margin-top:7px;color:var(--t3);display:flex;align-items:center;gap:5px}
+/* 图表 */
+.chart{width:100%;display:block}
+.chart .gl{stroke:rgba(255,255,255,.05);stroke-width:1}
+.chart .ax{font-size:9.5px;fill:var(--t4);font-family:var(--mono)}
+.chart .ln{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:100;stroke-dashoffset:100;animation:dr 1.7s cubic-bezier(.35,0,.15,1) forwards}
+.chart .ln.a{stroke:var(--ac);filter:drop-shadow(0 0 6px rgba(109,143,255,.45))}
+.chart .ln.o{stroke:var(--ok);animation-delay:.25s;opacity:.85}
+.chart .ln.b{stroke:var(--bad);animation-delay:.35s;opacity:.8}
+.chart .ar{opacity:0;animation:fi .8s ease forwards 1.1s}
+.chart .dt{opacity:0;animation:pp .45s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes dr{to{stroke-dashoffset:0}}
+@keyframes fi{to{opacity:1}}
+@keyframes pp{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+.ring{transform:rotate(-90deg)}
+.ring .tr{fill:none;stroke:rgba(255,255,255,.06)}
+.ring .vl{fill:none;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;
+  animation:dr 1.5s cubic-bezier(.35,0,.15,1) forwards .2s}
+/* 只画到 86% 就停 —— 用于「通过率」环 */
+.ring .vl86{fill:none;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;
+  animation:dr86 1.5s cubic-bezier(.35,0,.15,1) forwards .25s}
+@keyframes dr86{to{stroke-dashoffset:14}}
+/* 代码块 */
+.code{padding:11px 13px;border-radius:var(--r-sm);background:var(--bg-0);border:1px solid var(--line);
+  font-family:var(--mono);font-size:11.5px;color:var(--t2);white-space:pre-wrap;
+  word-break:break-all;line-height:1.7}
+/* 横向条 */
+.hb{display:flex;flex-direction:column;gap:9px}
+.hb .r{display:flex;align-items:center;gap:11px;font-size:11.5px}
+.hb .r .n{width:112px;color:var(--t2);font-family:var(--mono);font-size:11px;flex-shrink:0}
+.hb .r .t{flex:1;height:6px;border-radius:6px;background:rgba(255,255,255,.05);overflow:hidden}
+.hb .r .t i{display:block;height:100%;border-radius:6px;animation:gw 1.2s cubic-bezier(.4,0,.2,1) both}
+.hb .r .v{width:34px;text-align:right;color:var(--t3);font-family:var(--mono);font-size:11px}
+/* 输入 */
+.inp{height:34px;padding:0 12px;border-radius:var(--r-sm);background:var(--bg-3);
+  border:1px solid var(--line);color:var(--t1);font-size:12.5px;display:flex;align-items:center;
+  transition:border-color .2s,box-shadow .2s}
+.inp:focus-within{border-color:var(--ac-bd);box-shadow:0 0 0 3px rgba(109,143,255,.10)}
+.inp.ph{color:var(--t4)}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld > label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t4)}
+/* 提示条 */
+.bnr{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:var(--r-sm);
+  font-size:11.5px;line-height:1.5}
+.bnr.bad{background:var(--bad-bg);border:1px solid rgba(217,99,90,.22);color:#F0A79F}
+.bnr.warn{background:var(--warn-bg);border:1px solid rgba(216,164,63,.22);color:#EBCB8B}
+.bnr.info{background:var(--info-bg);border:1px solid rgba(90,169,214,.22);color:#A9D3EC}
+.bnr.ok{background:var(--ok-bg);border:1px solid rgba(69,185,141,.22);color:#93D9BE}
+/* 滚动条 */
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:5px;border:2px solid var(--bg-1)}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18)}
+
+/* ============================================================
+   屏幕专属
+   ============================================================ */
+/* 01 启动 */
+.boot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(70% 46% at 50% 40%,rgba(109,143,255,.10),transparent 66%),var(--bg-1)}
+.boot .grid{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(60% 50% at 50% 45%,#000,transparent 78%);
+  -webkit-mask-image:radial-gradient(60% 50% at 50% 45%,#000,transparent 78%)}
+.boot .in{position:relative;width:520px;text-align:center}
+.boot .mk{width:78px;height:78px;border-radius:20px;margin:0 auto 26px;display:grid;place-items:center;
+  background:linear-gradient(150deg,#1B2230,#0E1116);border:1px solid var(--line-2);color:var(--ac);
+  box-shadow:0 26px 50px -24px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.06);
+  animation:bmk 3.2s ease-in-out infinite}
+@keyframes bmk{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.boot h1{font-size:31px;font-weight:600;letter-spacing:-.035em}
+.boot h1 em{font-style:normal;color:var(--t3);font-weight:400}
+.boot .tg{font-size:12.5px;color:var(--t3);margin-top:9px;letter-spacing:.02em}
+.steps{margin-top:38px;display:flex;flex-direction:column;gap:1px;text-align:left}
+.stp{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:var(--r-sm);
+  font-size:12px;background:rgba(255,255,255,.014);border:1px solid transparent}
+.stp.cur{background:var(--ac-bg);border-color:var(--ac-bd)}
+.stp .n{font-family:var(--mono);font-size:11px;color:var(--t4);width:26px;flex-shrink:0}
+.stp .tx{flex:1;color:var(--t2)}
+.stp.done .tx{color:var(--t1)}
+.stp .ms{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+.boot .ft{position:absolute;bottom:34px;left:0;right:0;text-align:center;
+  font-family:var(--mono);font-size:10.5px;color:var(--t4);letter-spacing:.06em}
+.scan{height:2px;margin-top:30px;border-radius:2px;background:rgba(255,255,255,.05);overflow:hidden}
+.scan i{display:block;width:34%;height:100%;background:linear-gradient(90deg,transparent,var(--ac),transparent);
+  animation:sc 1.7s cubic-bezier(.6,0,.4,1) infinite}
+@keyframes sc{0%{transform:translateX(-110%)}100%{transform:translateX(400%)}}
+/* 时间线 */
+.tl{flex:1;overflow-y:auto;padding:14px 24px 12px;display:flex;flex-direction:column;gap:1px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.tl::-webkit-scrollbar{display:none}
+.tl > *{flex-shrink:0}
+.ev{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:8px 11px;border-radius:var(--r-sm);
+  border:1px solid transparent;transition:background .15s,border-color .15s}
+.ev:hover{background:rgba(255,255,255,.022)}
+.ev.bad{background:rgba(217,99,90,.055);border-color:rgba(217,99,90,.22)}
+.ev.good{background:rgba(69,185,141,.04);border-color:rgba(69,185,141,.16)}
+.ev.fin{background:var(--ac-bg);border-color:var(--ac-bd)}
+.ev .rl{display:flex;flex-direction:column;align-items:center;padding-top:1px}
+.ev .ico{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+.ev .ln{flex:1;width:1px;background:var(--line-2);margin-top:3px}
+.ev .hh{display:flex;align-items:baseline;gap:9px}
+.ev .tt{font-size:12.5px;font-weight:550;color:var(--t1)}
+.ev .sq{font-family:var(--mono);font-size:10px;color:var(--t4)}
+.ev .tm{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--t4);flex-shrink:0}
+.ev .dd{font-family:var(--mono);font-size:11.5px;color:var(--t2);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .code{margin-top:8px;padding:9px 11px;border-radius:var(--r-sm);background:var(--bg-0);
+  border:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--t2);
+  white-space:pre-wrap;word-break:break-all;line-height:1.65}
+/* 输入条 */
+.composer{flex:0 0 auto;padding:14px 24px 18px;border-top:1px solid var(--line);background:var(--bg-2);
+  display:flex;gap:11px;align-items:flex-end}
+.composer .ta{flex:1;min-height:42px;padding:11px 13px;border-radius:var(--r-sm);background:var(--bg-3);
+  border:1px solid var(--line);color:var(--t1);font-size:13px;line-height:1.5}
+.composer .ta.ph{color:var(--t4)}
+/* 权限层卡 */
+.lay{display:flex;align-items:center;gap:14px;padding:15px 16px}
+.lay .id{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;
+  font-family:var(--mono);font-size:12px;font-weight:700}
+.lay .nm{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.lay .ds{font-size:11px;color:var(--t3);margin-top:3px;line-height:1.45}
+.lay .ct{margin-left:auto;text-align:right;flex-shrink:0}
+.lay .ct .n{font-size:20px;font-weight:600;font-family:var(--mono);letter-spacing:-.03em;line-height:1}
+.lay .ct .k{font-size:9.5px;color:var(--t4);margin-top:4px;letter-spacing:.1em;text-transform:uppercase}
+/* 管道可视化 */
+.pipe{display:flex;align-items:stretch;gap:0}
+.pipe .st{flex:1;position:relative;padding:14px 12px;
+  background:rgba(255,255,255,.018);border:1px solid var(--line);border-right:none}
+.pipe .st:first-child{border-radius:var(--r-sm) 0 0 var(--r-sm)}
+.pipe .st:last-child{border-radius:0 var(--r-sm) var(--r-sm) 0;border-right:1px solid var(--line)}
+.pipe .st.pass{background:var(--ok-bg);border-color:rgba(69,185,141,.26)}
+.pipe .st.stop{background:var(--bad-bg);border-color:rgba(217,99,90,.26)}
+.pipe .st .t{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t4)}
+.pipe .st .r{font-size:12px;margin-top:6px;font-weight:550}
+.pipe .st .m{font-family:var(--mono);font-size:10.5px;color:var(--t3);margin-top:3px;line-height:1.4}
+/* 规则行 */
+.rl-tbl td .pat{font-family:var(--mono);font-size:11.5px;color:var(--t1);
+  background:rgba(255,255,255,.035);padding:2px 7px;border-radius:4px}
+/* 骨架/占位 */
+.sk{height:8px;border-radius:4px;background:rgba(255,255,255,.05)}
+/* 事件表紧凑 */
+.tc th,.tc td{padding:7px 12px}
+.tc td{font-size:11.5px}
+/* 拓扑图 */
+.topo{position:relative;height:100%;min-height:0}
+.topo .nd{position:absolute;padding:8px 12px;border-radius:var(--r-sm);background:var(--bg-3);
+  border:1px solid var(--line-2);font-size:11.5px;font-weight:550;color:var(--t1);
+  display:flex;align-items:center;gap:7px;white-space:nowrap;
+  transition:transform .3s,border-color .3s,filter .3s}
+.topo .nd:hover{transform:translateY(-2px);border-color:var(--ac-bd);filter:drop-shadow(0 10px 20px rgba(0,0,0,.6))}
+.topo .nd.hi{border-color:var(--ac-bd);background:var(--ac-bg);color:var(--ac-2)}
+.topo svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.topo svg path{fill:none;stroke:rgba(255,255,255,.14);stroke-width:1.4}
+.topo svg path.hi{stroke:var(--ac);stroke-width:1.8;stroke-dasharray:4 4}
+/* 空状态 */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;text-align:center}
+.empty .or{width:74px;height:74px;border-radius:20px;display:grid;place-items:center;margin-bottom:24px;
+  background:var(--bg-3);border:1px solid var(--line-2);color:var(--t3)}
+.empty h3{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.empty p{font-size:12.5px;color:var(--t3);margin-top:9px;max-width:460px;line-height:1.75}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8 4.6 6v6c0 4.4 3 7.9 7.4 9.2 4.4-1.3 7.4-4.8 7.4-9.2V6z"/><path d="M9.3 12.2l1.9 1.9 3.6-3.8"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4.4" width="18" height="15.2" rx="2.6"/><path d="M7.4 9.6l2.6 2.5-2.6 2.5M12.8 15h4"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2.6 12.4h4l2-5.4 3.4 10.6 2.4-7 1.8 3.4h5.2"/></symbol>
+  <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="6.4" rx="7.4" ry="3.2"/><path d="M4.6 6.4v11.2c0 1.8 3.3 3.2 7.4 3.2s7.4-1.4 7.4-3.2V6.4"/><path d="M4.6 12c0 1.8 3.3 3.2 7.4 3.2s7.4-1.4 7.4-3.2"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6.4" rx="2.2"/><rect x="3" y="13.6" width="18" height="6.4" rx="2.2"/><path d="M7 7.2h.01M7 16.8h.01"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5.4M15 3v5.4"/><path d="M6.4 8.4h11.2v2.8a5.6 5.6 0 0 1-11.2 0z"/><path d="M12 16.8V21"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6.4" y="6.4" width="11.2" height="11.2" rx="2.4"/><path d="M9.6 3v3.4M14.4 3v3.4M9.6 17.6V21M14.4 17.6V21M3 9.6h3.4M3 14.4h3.4M17.6 9.6H21M17.6 14.4H21"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7.6h6.4M15 7.6h5M4 16.4h4.4M13 16.4h7"/><circle cx="12.6" cy="7.6" r="2.4"/><circle cx="10.6" cy="16.4" r="2.4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.4"/><path d="M15.8 15.8 20 20"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.4v13.2M5.4 12h13.2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6 10 17.6 19 6.8"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.2 6.2l11.6 11.6M17.8 6.2 6.2 17.8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.4 21 19.4H3z"/><path d="M12 9.6v4.2M12 17v.2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.2V12l3.2 2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.6 5.4v13.2L19 12z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9.4 5.4v13.2M14.6 5.4v13.2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4.4v11.4"/><path d="M7.6 11.4 12 15.8l4.4-4.4"/><path d="M4.6 18.4v.6a1.6 1.6 0 0 0 1.6 1.6h11.6a1.6 1.6 0 0 0 1.6-1.6v-.6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.7-6"/><path d="M20.2 4.4v4.4h-4.4"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M14.6 5.4 8 12l6.6 6.6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M9.4 5.4 16 12l-6.6 6.6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="M5.4 9.4 12 16l6.6-6.6"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3.4 5.6h17.2l-6.6 7.6v5.6l-4-2.2v-3.4z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1.8 12S5.4 5.8 12 5.8 22.2 12 22.2 12 18.6 18.2 12 18.2 1.8 12 1.8 12z"/><circle cx="12" cy="12" r="3.2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="11.2" height="11.2" rx="2.4"/><path d="M15.6 5.6a2.4 2.4 0 0 0-2.4-2.4H6.8a2.4 2.4 0 0 0-2.4 2.4v6.4a2.4 2.4 0 0 0 2.4 2.4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.6 19.4l.9-4.3L15.6 5a2.2 2.2 0 0 1 3.2 3.2L8.9 18.5z"/><path d="M4.6 19.4l4.3-.9"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.6 6.8h14.8M9.4 6.8V4.6h5.2v2.2"/><path d="M6.6 6.8l.9 12a1.8 1.8 0 0 0 1.8 1.6h5.4a1.8 1.8 0 0 0 1.8-1.6l.9-12"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.4" width="14" height="9.6" rx="2.8"/><path d="M8.4 10.4V8a3.6 3.6 0 0 1 7.2 0v2.4"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.6" cy="15.4" r="3.6"/><path d="M10.2 12.8 19.4 3.6M16.6 6.4l2.4 2.4M14 9l2.4 2.4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2.8 2.8 7.6 12 12.4l9.2-4.8z"/><path d="M2.8 12.4 12 17.2l9.2-4.8"/><path d="M2.8 16.8 12 21.6l9.2-4.8"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 2.8 3.2 7.2v9.6L12 21.2l8.8-4.4V7.2z"/><path d="M3.2 7.2 12 11.6l8.8-4.4M12 11.6v9.6"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6.4" cy="6.4" r="2.6"/><circle cx="6.4" cy="17.6" r="2.6"/><circle cx="17.6" cy="12" r="2.6"/><path d="M6.4 9v6M9 6.4h3a2.6 2.6 0 0 1 2.6 2.6v1"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13.4 2.6 4.6 13.4h6.6l-.6 8 8.8-10.8h-6.6z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M13.6 3.4H7a2.4 2.4 0 0 0-2.4 2.4v12.4A2.4 2.4 0 0 0 7 20.6h10a2.4 2.4 0 0 0 2.4-2.4V9.2z"/><path d="M13.6 3.4v5.8h5.8M8.4 13.4h7.2M8.4 16.8h4.8"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.6" y="3.6" width="6.8" height="6.8" rx="2"/><rect x="13.6" y="3.6" width="6.8" height="6.8" rx="2"/><rect x="3.6" y="13.6" width="6.8" height="6.8" rx="2"/><rect x="13.6" y="13.6" width="6.8" height="6.8" rx="2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8.4 6.4h11.2M8.4 12h11.2M8.4 17.6h11.2M4.4 6.4h.01M4.4 12h.01M4.4 17.6h.01"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.6 16.6V11a5.4 5.4 0 0 1 10.8 0v5.6"/><path d="M4.8 16.6h14.4"/><path d="M10 19.4a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.4" r="3.9"/><path d="M4.8 20c1-3.6 3.8-5.5 7.2-5.5s6.2 1.9 7.2 5.5"/></symbol>
+  <symbol id="i-plug-off" viewBox="0 0 24 24"><path d="M9 3v5.4M13.6 3.4v4.4"/><path d="M6.4 8.4h8.2v2.8c0 .6-.07 1.2-.2 1.74"/><path d="M7.2 15.4a5.6 5.6 0 0 0 7.6 1.4M12 16.8V21"/><path d="M3.4 3.4 20.6 20.6"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19.4V4.6M6 10.6 12 4.6l6 6"/></symbol>
+  <symbol id="i-arrow-dn" viewBox="0 0 24 24"><path d="M12 4.6v14.8M6 13.4 12 19.4l6-6"/></symbol>
+  <symbol id="i-terminal-2" viewBox="0 0 24 24"><path d="M4.4 6.4 9 12l-4.6 5.6"/><path d="M12.4 17.6h7.2"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3.4 17.6V6.4M9.4 17.6V10M15.4 17.6V13.6M21 17.6V8.4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8"/><path d="M12 3.6c2.2 2.4 3.3 5.3 3.3 8.4s-1.1 6-3.3 8.4c-2.2-2.4-3.3-5.3-3.3-8.4s1.1-6 3.3-8.4z"/></symbol>
+</svg>
+<header class="bh">
+  <div class="eb">Desktop UI · Ops Console</div>
+  <h1>OpsAgent <em>·</em> 只读运维诊断控制台</h1>
+  <p>
+    12 个桌面画板（1440×900），深炭灰基底、单一强调色、彩色仅用于状态语义。
+    设计前提：<strong style="color:var(--t1);font-weight:500">权限拦截必须可见</strong>——
+    每一次工具调用、每一次拒绝、每一步推理都实时呈现在事件流上，而不是埋在日志里。
+  </p>
+  <div class="sw">
+    <span><i style="background:#0A0B0D"></i>bg-1 · #0A0B0D</span>
+    <span><i style="background:#14171B"></i>bg-3 · #14171B</span>
+    <span><i style="background:#6D8FFF"></i>accent · #6D8FFF</span>
+    <span><i style="background:#45B98D"></i>ok · #45B98D</span>
+    <span><i style="background:#D8A43F"></i>warn · #D8A43F</span>
+    <span><i style="background:#D9635A"></i>deny · #D9635A</span>
+    <span><i style="background:#9B7ED9"></i>L3 · #9B7ED9</span>
+    <span><i style="background:#EDEFF2"></i>text · #EDEFF2</span>
+  </div>
+</header>
+
+<div class="board">
+<div class="row">
+
+  <!-- ============ 01 启动 / 后端握手 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 正在启动</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag mut mono">python -m ops_agent.bridge.sidecar</span></span>
+      </div>
+      <div class="boot">
+        <div class="grid"></div>
+        <div class="in">
+          <div class="mk"><svg class="ic" style="width:36px;height:36px"><use href="#i-shield"/></svg></div>
+          <h1>OpsAgent <em>/ console</em></h1>
+          <div class="tg">只读运维诊断 · 分层权限 · 可审计事件流</div>
+
+          <div class="steps">
+            <div class="stp done"><span class="n">01</span><span class="tx">拉起 Python sidecar 进程</span>
+              <span class="tag ok"><svg class="ic s"><use href="#i-check"/></svg></span><span class="ms">142ms</span></div>
+            <div class="stp done"><span class="n">02</span><span class="tx">加载插件 8 / 8（拓扑排序）</span>
+              <span class="tag ok"><svg class="ic s"><use href="#i-check"/></svg></span><span class="ms">318ms</span></div>
+            <div class="stp done"><span class="n">03</span><span class="tx">初始化权限流水线 · L1 34 · L2 79 · L3 8</span>
+              <span class="tag ok"><svg class="ic s"><use href="#i-check"/></svg></span><span class="ms">27ms</span></div>
+            <div class="stp cur"><span class="n">04</span><span class="tx">打开会话事件流 <span class="mono" style="color:var(--t3)">.sessions/session.jsonl</span></span>
+              <span class="dot warn breathe" style="margin:0 5px"></span><span class="ms">…</span></div>
+            <div class="stp"><span class="n">05</span><span class="tx">就绪 · 等待指令</span>
+              <span class="ms">—</span></div>
+          </div>
+
+          <div class="scan"><i></i></div>
+        </div>
+        <div class="ft">v0.1.0 · 默认拒绝一切写操作 · 事件流 append-only</div>
+      </div>
+    </div>
+    <div class="cap-tag">01 · <b>启动 / 后端握手</b><span class="d">sidecar 拉起与插件加载过程可视化</span></div>
+  </div>
+
+  <!-- ============ 02 控制台总览 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 控制台</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag ok"><span class="dot ok"></span>后端就绪 · PID 24581</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni on"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div>
+              <h2>控制台</h2>
+              <div class="sub">2026 年 9 月 18 日 · 周四 · 适配器 mock</div>
+            </div>
+            <span class="sp"></span>
+            <span class="chip on">近 7 天</span>
+            <span class="chip">近 30 天</span>
+            <span class="btn"><svg class="ic s"><use href="#i-download"/></svg>导出报告</span>
+          </div>
+
+          <div class="bd">
+            <div class="kpis">
+              <div class="kpi"><div class="k">会话总数</div><div class="v">128</div>
+                <div class="d"><svg class="ic s" style="color:var(--ok)"><use href="#i-arrow-up"/></svg><span style="color:var(--ok)">+12.4%</span> 较上周</div></div>
+              <div class="kpi"><div class="k">事件总数</div><div class="v">3,412<small>条</small></div>
+                <div class="d"><svg class="ic s" style="color:var(--ok)"><use href="#i-arrow-up"/></svg><span style="color:var(--ok)">+8.1%</span> 较上周</div></div>
+              <div class="kpi"><div class="k">权限拦截</div><div class="v" style="color:var(--bad)">47<small>次</small></div>
+                <div class="d"><svg class="ic s" style="color:var(--ok)"><use href="#i-arrow-dn"/></svg><span style="color:var(--ok)">-3</span> 较上周</div></div>
+              <div class="kpi"><div class="k">测试覆盖率</div><div class="v">87<small>%</small></div>
+                <div class="d">198 用例全绿 · L1/L3 达 100%</div></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 292px;gap:14px">
+              <div class="card hv">
+                <div class="hd"><h3>事件流活跃度</h3><span class="lbl">EVENTS / DAY</span><span class="sp"></span>
+                  <span class="tag ac">工具调用</span><span class="tag ok">权限放行</span><span class="tag bad">拦截</span></div>
+                <div class="pad">
+                  <svg class="chart" viewBox="0 0 780 176">
+                    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#6D8FFF" stop-opacity=".22"/>
+                      <stop offset="100%" stop-color="#6D8FFF" stop-opacity="0"/></linearGradient></defs>
+                    <line class="gl" x1="34" y1="16" x2="774" y2="16"/><line class="gl" x1="34" y1="56" x2="774" y2="56"/>
+                    <line class="gl" x1="34" y1="96" x2="774" y2="96"/><line class="gl" x1="34" y1="136" x2="774" y2="136"/>
+                    <text class="ax" x="24" y="19" text-anchor="end">600</text><text class="ax" x="24" y="59" text-anchor="end">400</text>
+                    <text class="ax" x="24" y="99" text-anchor="end">200</text><text class="ax" x="24" y="139" text-anchor="end">0</text>
+                    <path class="ar" fill="url(#ga)" d="M40,118 C120,104 160,116 240,90 C320,64 360,78 440,54 C520,30 560,46 640,32 C700,22 740,28 768,20 L768,150 L40,150 Z"/>
+                    <path class="ln o" pathLength="100" d="M40,132 C120,124 160,130 240,112 C320,94 360,104 440,86 C520,68 560,78 640,62 C700,50 740,56 768,48"/>
+                    <path class="ln a" pathLength="100" d="M40,118 C120,104 160,116 240,90 C320,64 360,78 440,54 C520,30 560,46 640,32 C700,22 740,28 768,20"/>
+                    <circle class="dt" cx="240" cy="90" r="3" fill="#0A0B0D" stroke="#6D8FFF" stroke-width="1.8" style="transform-origin:240px 90px;animation-delay:.8s"/>
+                    <circle class="dt" cx="440" cy="54" r="3" fill="#0A0B0D" stroke="#6D8FFF" stroke-width="1.8" style="transform-origin:440px 54px;animation-delay:1.1s"/>
+                    <circle class="dt" cx="640" cy="32" r="3" fill="#0A0B0D" stroke="#6D8FFF" stroke-width="1.8" style="transform-origin:640px 32px;animation-delay:1.4s"/>
+                    <circle class="dt" cx="768" cy="20" r="4.4" fill="#6D8FFF" stroke="#0A0B0D" stroke-width="2" style="transform-origin:768px 20px;animation-delay:1.7s"/>
+                    <text class="ax" x="40" y="168" text-anchor="middle">09/12</text><text class="ax" x="240" y="168" text-anchor="middle">09/13</text>
+                    <text class="ax" x="440" y="168" text-anchor="middle">09/15</text><text class="ax" x="640" y="168" text-anchor="middle">09/17</text>
+                    <text class="ax" x="768" y="168" text-anchor="middle">今天</text>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="card hv">
+                <div class="hd"><h3>权限通过率</h3></div>
+                <div class="pad" style="display:flex;flex-direction:column;align-items:center;gap:14px">
+                  <svg class="ring" viewBox="0 0 120 120" style="width:132px;height:132px">
+                    <circle class="tr" cx="60" cy="60" r="50" stroke-width="11"/>
+                    <circle class="vl86" cx="60" cy="60" r="50" stroke="#45B98D" stroke-width="11" pathLength="100"/>
+                  </svg>
+                  <div style="text-align:center;margin-top:-6px">
+                    <div style="font-size:29px;font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums">86%</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:3px">3,365 放行 · 47 拦截</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">
+              <div class="card hv">
+                <div class="hd"><h3>工具调用分布</h3><span class="sp"></span><span class="lbl">TOP 5</span></div>
+                <div class="pad">
+                  <div class="hb">
+                    <div class="r"><span class="n">ssh_execute</span><span class="t"><i style="width:82%;background:var(--ac)"></i></span><span class="v">1,284</span></div>
+                    <div class="r"><span class="n">ssh_read_file</span><span class="t"><i style="width:54%;background:var(--ac);animation-delay:.08s"></i></span><span class="v">846</span></div>
+                    <div class="r"><span class="n">ssh_list_dir</span><span class="t"><i style="width:37%;background:var(--ac);animation-delay:.16s"></i></span><span class="v">573</span></div>
+                    <div class="r"><span class="n" style="color:var(--bad)">被拦截调用</span><span class="t"><i style="width:14%;background:var(--bad);animation-delay:.24s"></i></span><span class="v">47</span></div>
+                    <div class="r"><span class="n">context_compact</span><span class="t"><i style="width:22%;background:var(--pur);animation-delay:.32s"></i></span><span class="v">312</span></div>
+                  </div>
+                  <div class="bnr info" style="margin-top:16px">
+                    <svg class="ic s"><use href="#i-alert"/></svg>
+                    <span><b>47 次拦截全部发生在 L1/L2</b>，无一次穿透到工具执行层。</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card hv">
+                <div class="hd"><h3>最近会话</h3><span class="sp"></span><span class="btn sm gh">全部</span></div>
+                <table class="tbl tc">
+                  <thead><tr><th>会话</th><th>主机</th><th>步骤</th><th>拦截</th><th>状态</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">#a3f2c1</td><td class="mono">demo-host</td><td>3</td>
+                      <td><span class="tag bad">1</span></td><td><span class="tag ok">已完成</span></td></tr>
+                    <tr><td class="mono">#9b7e40</td><td class="mono">10.0.1.24</td><td>4</td>
+                      <td>—</td><td><span class="tag ok">已完成</span></td></tr>
+                    <tr><td class="mono">#71cd8a</td><td class="mono">10.0.1.31</td><td>6</td>
+                      <td>—</td><td><span class="tag warn">达最大步数</span></td></tr>
+                    <tr><td class="mono">#5f2a19</td><td class="mono">demo-host</td><td>2</td>
+                      <td><span class="tag bad">2</span></td><td><span class="tag ok">已完成</span></td></tr>
+                    <tr><td class="mono">#4410bb</td><td class="mono">10.0.2.7</td><td>3</td>
+                      <td>—</td><td><span class="tag bad">连接失败</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">02 · <b>控制台总览</b><span class="d">KPI · 事件流趋势 · 工具分布 · 会话列表</span></div>
+  </div>
+
+  <!-- ============ 03 执行时间线（实时） ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 执行 · demo-host</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag ac"><span class="dot ac breathe" style="background:var(--ac)"></span>正在执行</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni on"><svg class="ic"><use href="#i-terminal"/></svg>执行<span class="bdg">运行中</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div>
+              <h2>执行时间线</h2>
+              <div class="sub">主机 <span class="mono" style="color:var(--t2)">demo-host</span> · 适配器 mock · 会话 <span class="mono" style="color:var(--t2)">#a3f2c1</span></div>
+            </div>
+            <span class="sp"></span>
+            <span class="chip on">全部事件</span>
+            <span class="chip">仅拦截</span>
+            <span class="btn dg"><svg class="ic s"><use href="#i-x"/></svg>取消</span>
+          </div>
+
+          <div class="tl">
+            <div class="ev"><div class="rl"><span class="ico" style="color:var(--ac);background:var(--ac-bg)"><svg class="ic s"><use href="#i-arrow-dn"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">指令</span><span class="sq mono">#1</span><span class="tm">14:02:11</span></div>
+                <div class="dd">看看这台机器磁盘和内存使用情况</div></div></div>
+
+            <div class="ev"><div class="rl"><span class="ico" style="color:var(--t3);background:rgba(255,255,255,.05)"><svg class="ic s"><use href="#i-pulse"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">推理 · 第 1 步</span><span class="sq mono">#2</span><span class="tm">14:02:11</span></div>
+                <div class="dd">2 条上下文 · 决策：调用 ssh_execute 查询磁盘</div></div></div>
+
+            <div class="ev"><div class="rl"><span class="ico" style="color:var(--t2);background:rgba(255,255,255,.05)"><svg class="ic s"><use href="#i-terminal"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">ssh_execute</span><span class="sq mono">#3</span><span class="tm">14:02:11</span></div>
+                <div class="dd">df -h</div></div></div>
+
+            <div class="ev good"><div class="rl"><span class="ico" style="color:var(--ok);background:var(--ok-bg)"><svg class="ic s"><use href="#i-check"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">权限通过</span><span class="sq mono">#4</span><span class="tm">14:02:11</span></div>
+                <div class="dd">L1 → L2 → L3 全部放行 · 只读命令</div></div></div>
+
+            <div class="ev"><div class="rl"><span class="ico" style="color:var(--t2);background:rgba(255,255,255,.05)"><svg class="ic s"><use href="#i-terminal"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">ssh_execute</span><span class="sq mono">#5</span><span class="tm">14:02:12</span></div>
+                <div class="dd">free -m</div></div></div>
+
+            <div class="ev good"><div class="rl"><span class="ico" style="color:var(--ok);background:var(--ok-bg)"><svg class="ic s"><use href="#i-check"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">权限通过</span><span class="sq mono">#6</span><span class="tm">14:02:12</span></div>
+                <div class="dd">L1 → L2 → L3 全部放行 · 只读命令</div></div></div>
+
+            <div class="ev"><div class="rl"><span class="ico" style="color:var(--t3);background:rgba(255,255,255,.05)"><svg class="ic s"><use href="#i-pulse"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">推理 · 第 2 步</span><span class="sq mono">#7</span><span class="tm">14:02:12</span></div>
+                <div class="dd">6 条上下文 · 决策：确认日志目录占用</div></div></div>
+
+            <div class="ev"><div class="rl"><span class="ico" style="color:var(--t2);background:rgba(255,255,255,.05)"><svg class="ic s"><use href="#i-grid"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">ssh_list_dir</span><span class="sq mono">#8</span><span class="tm">14:02:13</span></div>
+                <div class="dd">ls -lh /var/log</div></div></div>
+
+            <div class="ev bad"><div class="rl"><span class="ico" style="color:var(--bad);background:var(--bad-bg)"><svg class="ic s"><use href="#i-x"/></svg></span><span class="ln"></span></div>
+              <div><div class="hh"><span class="tt">拦截 · L1</span><span class="sq mono">#9</span><span class="tm">14:02:13</span></div>
+                <div class="dd">命令包含高危片段：'rm -rf /'</div>
+                <div class="code">$ rm -rf /var/log/*
+拒绝层：L1 全局黑名单
+命中规则：/\brm\s+-[a-z]*[rf]/
+处置：未执行 · 已写入审计事件流</div></div></div>
+
+            <div class="ev fin"><div class="rl"><span class="ico" style="color:var(--ac);background:var(--ac-bg)"><svg class="ic s"><use href="#i-check"/></svg></span></div>
+              <div><div class="hh"><span class="tt">得出结论</span><span class="sq mono">#10</span><span class="tm">14:02:14</span></div>
+                <div class="dd">186 字 · 第 3 步 · 本次拦截 1 次</div></div></div>
+          </div>
+
+          <div class="composer">
+            <div class="ta ph">下达一条只读诊断指令，例如：看看这台机器磁盘和内存使用情况</div>
+            <span class="btn pri" style="height:42px;padding:0 18px"><svg class="ic s"><use href="#i-arrow-up"/></svg>发送</span>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="hd"><h3>会话信息</h3><span class="sp"></span><span class="tag ac mono">#a3f2c1</span></div>
+          <div class="pad" style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><div class="lbl">步数</div><div class="mono" style="font-size:17px;font-weight:600;margin-top:4px">3 / 8</div></div>
+              <div><div class="lbl">耗时</div><div class="mono" style="font-size:17px;font-weight:600;margin-top:4px">2.8s</div></div>
+              <div><div class="lbl">工具调用</div><div class="mono" style="font-size:17px;font-weight:600;margin-top:4px">4</div></div>
+              <div><div class="lbl">拦截</div><div class="mono" style="font-size:17px;font-weight:600;margin-top:4px;color:var(--bad)">1</div></div>
+            </div>
+            <div class="bar"><i style="width:38%"></i></div>
+            <div style="font-size:11px;color:var(--t3)">上下文占用 38% · 压缩阈值 80%</div>
+          </div>
+          <div class="hd" style="border-top:1px solid var(--line)"><h3>快捷指令</h3></div>
+          <div class="pad" style="display:flex;flex-direction:column;gap:7px">
+            <span class="chip" style="text-align:left">查看磁盘和内存使用情况</span>
+            <span class="chip" style="text-align:left">检查最近的系统错误日志</span>
+            <span class="chip" style="text-align:left">列出 /var/log 下最大的文件</span>
+            <span class="chip" style="text-align:left">确认 nginx 服务运行状态</span>
+          </div>
+          <div class="hd" style="border-top:1px solid var(--line)"><h3>事件流</h3><span class="sp"></span>
+            <span class="tag mut mono">14 / 14 类型</span></div>
+          <div class="pad" style="font-family:var(--mono);font-size:10.5px;color:var(--t3);line-height:1.9">
+            <div><span style="color:var(--t4)">0001</span> session.start</div>
+            <div><span style="color:var(--t4)">0002</span> agent.input</div>
+            <div><span style="color:var(--t4)">0003</span> agent.think</div>
+            <div><span style="color:var(--t4)">0004</span> tool.before</div>
+            <div><span style="color:var(--ok)">0005</span> permission.allowed</div>
+            <div><span style="color:var(--bad)">0006</span> permission.denied</div>
+            <div><span style="color:var(--ac)">0007</span> agent.final</div>
+          </div>
+          <div class="hd" style="border-top:1px solid var(--line)"><h3>会话操作</h3></div>
+          <div class="pad" style="display:flex;flex-direction:column;gap:7px;padding:12px 14px 14px">
+            <span class="btn gh" style="justify-content:flex-start">
+              <svg class="ic s"><use href="#i-eye"/></svg>查看完整报告</span>
+            <span class="btn gh" style="justify-content:flex-start">
+              <svg class="ic s"><use href="#i-download"/></svg>导出事件流 JSONL</span>
+            <span class="btn gh" style="justify-content:flex-start">
+              <svg class="ic s"><use href="#i-copy"/></svg>复制复现命令</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">03 · <b>执行时间线</b><span class="d">核心界面：权限拦截实时高亮</span></div>
+  </div>
+
+</div>
+<div class="row">
+
+  <!-- ============ 04 会话详情 / 诊断报告 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 会话记录 / 诊断报告</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag mut mono">#a3f2c1</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni on"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <span class="btn gh sm" style="height:30px"><svg class="ic s"><use href="#i-chev-l"/></svg>返回</span>
+            <div>
+              <h2>拥有健康有活力的身体</h2>
+              <div class="sub">demo-host · 2026-09-18 14:02:11 · 适配器 mock · 耗时 2.8s</div>
+            </div>
+            <span class="sp"></span>
+            <span class="tag ok">已完成</span>
+            <span class="btn"><svg class="ic s"><use href="#i-download"/></svg>导出 JSONL</span>
+            <span class="btn"><svg class="ic s"><use href="#i-refresh"/></svg>回放</span>
+          </div>
+          <div class="bd">
+            <div class="card">
+              <div class="hd"><span class="ico" style="width:20px;height:20px;border-radius:6px;display:grid;place-items:center;color:var(--ac);background:var(--ac-bg)"><svg class="ic s"><use href="#i-check"/></svg></span>
+                <h3>结论</h3><span class="sp"></span><span class="lbl">AGENT FINAL</span></div>
+              <div class="pad" style="font-size:13.5px;line-height:1.85;color:var(--t1)">
+                该主机磁盘使用率正常，根分区已用 62%（剩余 19G），内存占用 41%，无 swap 交换。
+                期间检测到一次高危写操作尝试（<span class="mono" style="color:var(--bad)">rm -rf /var/log/*</span>）已被
+                <span style="color:var(--bad);font-weight:600">L1 全局黑名单</span>拦截，未执行。
+                建议保持当前运行状态，无需干预。
+              </div>
+            </div>
+
+            <div class="kpis">
+              <div class="kpi" style="padding:13px 15px"><div class="k">推理步数</div><div class="v" style="font-size:23px">3<small>/ 8</small></div></div>
+              <div class="kpi" style="padding:13px 15px"><div class="k">工具调用</div><div class="v" style="font-size:23px">4</div></div>
+              <div class="kpi" style="padding:13px 15px"><div class="k">权限拦截</div><div class="v" style="font-size:23px;color:var(--bad)">1</div></div>
+              <div class="kpi" style="padding:13px 15px"><div class="k">事件条数</div><div class="v" style="font-size:23px">7</div></div>
+            </div>
+
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div class="hd"><h3>执行步骤留痕</h3><span class="sp"></span>
+                <span class="tag mut">StepRecord</span></div>
+              <div style="overflow:hidden">
+                <table class="tbl">
+                  <thead><tr><th style="width:52px">步骤</th><th style="width:150px">工具</th><th>命令</th>
+                    <th style="width:90px">权限层</th><th style="width:110px">结果</th><th style="width:88px">输出</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono" style="color:var(--t4)">01</td><td class="mono">ssh_execute</td>
+                      <td class="mono">df -h</td><td><span class="tag ok">ALL</span></td>
+                      <td><span class="tag ok">允许</span></td><td class="mono">412 字</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">02</td><td class="mono">ssh_execute</td>
+                      <td class="mono">free -m</td><td><span class="tag ok">ALL</span></td>
+                      <td><span class="tag ok">允许</span></td><td class="mono">286 字</td></tr>
+                    <tr style="background:rgba(217,99,90,.055)">
+                      <td class="mono" style="color:var(--t4)">03</td><td class="mono">ssh_execute</td>
+                      <td class="mono" style="color:var(--bad)">rm -rf /var/log/*</td>
+                      <td><span class="tag bad">L1</span></td>
+                      <td><span class="tag bad">拒绝</span></td><td class="mono" style="color:var(--t4)">—</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">04</td><td class="mono">ssh_list_dir</td>
+                      <td class="mono">ls -lh /var/log</td><td><span class="tag ok">ALL</span></td>
+                      <td><span class="tag ok">允许</span></td><td class="mono">638 字</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="bnr bad" style="margin:14px 16px 16px">
+                <svg class="ic s"><use href="#i-alert"/></svg>
+                <span><b>第 03 步被拦截</b> · 命中规则 <span class="mono">/\brm\s+-[a-z]*[rf]/</span> · 已写入审计事件流，未产生任何远程副作用。</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">04 · <b>会话详情 / 诊断报告</b><span class="d">结论 · 步骤留痕表 · 拦截单独标注</span></div>
+  </div>
+
+  <!-- ============ 05 权限分层 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 权限分层</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag ok"><span class="dot ok"></span>流水线已加载</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni on"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div>
+              <h2>权限分层</h2>
+              <div class="sub">3 层生产线 · 121 条规则 · 任一层拒绝即短路返回</div>
+            </div>
+            <span class="sp"></span>
+            <span class="btn"><svg class="ic s"><use href="#i-plus"/></svg>新增规则</span>
+          </div>
+          <div class="bd">
+            <div class="bnr info">
+              <svg class="ic s"><use href="#i-alert"/></svg>
+              <span><b>L1 → L2 → L3 顺序执行，短路返回</b>。检查对象是「命令」本身；路径维度（L5）尚未实现 —— 见已知限制。</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+              <div class="card hv"><div class="lay">
+                <span class="id" style="color:var(--bad);background:var(--bad-bg);border:1px solid rgba(217,99,90,.28)">L1</span>
+                <div><div class="nm">全局黑名单</div><div class="ds">正则 + 字面量双路匹配，抗变形写法</div></div>
+                <div class="ct"><div class="n" style="color:var(--bad)">34</div><div class="k">规则</div></div>
+              </div></div>
+              <div class="card hv"><div class="lay">
+                <span class="id" style="color:var(--warn);background:var(--warn-bg);border:1px solid rgba(216,164,63,.28)">L2</span>
+                <div><div class="nm">命令白名单</div><div class="ds">只放行只读命令，管道每段单独过审</div></div>
+                <div class="ct"><div class="n" style="color:var(--warn)">79</div><div class="k">规则</div></div>
+              </div></div>
+              <div class="card hv"><div class="lay">
+                <span class="id" style="color:var(--pur);background:var(--pur-bg);border:1px solid rgba(155,126,217,.28)">L3</span>
+                <div><div class="nm">Shell 注入检测</div><div class="ds">命令替换 / 重定向 / 串联 / 畸形引号</div></div>
+                <div class="ct"><div class="n" style="color:var(--pur)">8</div><div class="k">规则</div></div>
+              </div></div>
+            </div>
+
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div class="hd"><h3>L1 规则明细</h3><span class="sp"></span>
+                <span class="btn sm gh">全部层</span><span class="btn sm gh">仅 L1</span></div>
+              <table class="tbl rl-tbl">
+                <thead><tr><th style="width:56px">层</th><th>匹配模式</th><th style="width:88px">类型</th><th style="width:120px">命中次数</th><th style="width:96px">状态</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\brm\s+-[a-z]*[rf]/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">23</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:68%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">dd if=/dev/zero</span></td>
+                    <td><span class="tag mut">字面量</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">7</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:26%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\b(sudo|su|doas)\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">9</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:32%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\|\s*(sudo\s+)?(sh|bash|zsh)\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">5</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:18%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\b(shutdown|reboot|halt)\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">3</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:10%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">//etc/ssh/sshd_config/</span></td>
+                    <td><span class="tag mut">字面量</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">0</span>
+                      <span class="bar" style="flex:1"><i style="width:0%"></i></span></div></td>
+                    <td><span class="tag mut">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\bmkfs(\.[a-z0-9]+)?\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">2</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:8%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/:\s*\(\s*\)\s*\{/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">1</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:4%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\bchmod\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">6</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:22%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\b(useradd|userdel|usermod|groupadd)\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">4</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:14%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\b(curl|wget)\b.*\|\s*(sh|bash)\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">3</span>
+                      <span class="bar" style="flex:1"><i class="bad" style="width:10%"></i></span></div></td>
+                    <td><span class="tag ok">启用</span></td></tr>
+                  <tr><td><span class="tag bad">L1</span></td><td><span class="pat">/\biptables\b/</span></td>
+                    <td><span class="tag mut">正则</span></td>
+                    <td><div style="display:flex;align-items:center;gap:8px"><span class="mono">0</span>
+                      <span class="bar" style="flex:1"><i style="width:0%"></i></span></div></td>
+                    <td><span class="tag mut">启用</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">05 · <b>权限分层</b><span class="d">三层卡片 + 规则明细表 + 命中热度</span></div>
+  </div>
+
+  <!-- ============ 06 命令校验器 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 命令校验器</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag mut">不连接任何主机</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni on"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div><h2>命令校验器</h2>
+              <div class="sub">把命令直接喂给三层流水线，查看它会被放行还是拦截</div></div>
+          </div>
+          <div class="bd">
+            <div class="card pad" style="display:flex;gap:11px;align-items:center">
+              <span class="mono" style="color:var(--t4);font-size:14px">$</span>
+              <span class="mono" style="flex:1;font-size:14px;color:var(--t1)">rm -rf /var/log/*</span>
+              <span class="btn pri">校验</span>
+            </div>
+
+            <div class="card">
+              <div class="hd">
+                <span class="ico" style="width:20px;height:20px;border-radius:6px;display:grid;place-items:center;color:var(--bad);background:var(--bad-bg)"><svg class="ic s"><use href="#i-x"/></svg></span>
+                <h3 style="color:var(--bad)">拒绝</h3>
+                <span class="sp"></span>
+                <span class="tag bad mono">L1</span>
+                <span class="ms mono" style="font-size:10.5px;color:var(--t4)">判定耗时 0.4ms</span>
+              </div>
+              <div class="pad" style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div><div class="lbl">命令</div><div class="mono" style="font-size:12.5px;margin-top:5px">rm -rf /var/log/*</div></div>
+                  <div><div class="lbl">原因</div><div style="font-size:12.5px;color:var(--t2);margin-top:5px">命令包含高危片段：'rm -rf /'</div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div><div class="lbl">命中规则</div><div class="mono" style="font-size:12.5px;margin-top:5px;color:var(--bad)">/\brm\s+-[a-z]*[rf]/</div></div>
+                  <div><div class="lbl">处置</div><div style="font-size:12.5px;color:var(--t2);margin-top:5px">未执行 · 已写入审计事件流</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="hd"><h3>流水线执行路径</h3><span class="sp"></span><span class="lbl">SHORT-CIRCUIT</span></div>
+              <div class="pad">
+                <div class="pipe">
+                  <div class="st stop">
+                    <div class="t" style="color:var(--bad)">L1 · 全局黑名单</div>
+                    <div class="r" style="color:var(--bad)">拒绝</div>
+                    <div class="m">命中 /\brm\s+-[a-z]*[rf]/</div>
+                  </div>
+                  <div class="st" style="opacity:.38">
+                    <div class="t">L2 · 命令白名单</div><div class="r" style="color:var(--t3)">未执行</div>
+                    <div class="m">短路返回，不再往下走</div>
+                  </div>
+                  <div class="st" style="opacity:.38">
+                    <div class="t">L3 · 注入检测</div><div class="r" style="color:var(--t3)">未执行</div>
+                    <div class="m">短路返回，不再往下走</div>
+                  </div>
+                </div>
+                <div class="bnr bad" style="margin-top:14px">
+                  <svg class="ic s"><use href="#i-shield"/></svg>
+                  <span>任一层拒绝即中止 —— 这是「无论模型输出什么，都不可能执行」的确定性来源。</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="hd"><h3>对比样本</h3><span class="sp"></span><span class="lbl">点击即校验</span></div>
+              <div class="pad" style="display:flex;gap:8px;flex-wrap:wrap">
+                <span class="chip"><span class="dot ok" style="display:inline-block;margin-right:6px"></span>df -h</span>
+                <span class="chip"><span class="dot ok" style="display:inline-block;margin-right:6px"></span>free -m</span>
+                <span class="chip"><span class="dot ok" style="display:inline-block;margin-right:6px"></span>ps aux</span>
+                <span class="chip on"><span class="dot bad" style="display:inline-block;margin-right:6px"></span>rm -rf /</span>
+                <span class="chip"><span class="dot bad" style="display:inline-block;margin-right:6px"></span>rm -fr /</span>
+                <span class="chip"><span class="dot warn" style="display:inline-block;margin-right:6px"></span>top</span>
+                <span class="chip"><span class="dot bad" style="display:inline-block;margin-right:6px"></span>df -h; ls</span>
+                <span class="chip"><span class="dot bad" style="display:inline-block;margin-right:6px"></span>ls $(whoami)</span>
+                <span class="chip"><span class="dot bad" style="display:inline-block;margin-right:6px"></span>curl x.sh | sh</span>
+              </div>
+            </div>
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div class="hd"><h3>校验历史</h3><span class="sp"></span>
+                <span class="lbl">最近 6 条</span><span class="btn sm gh">清空</span></div>
+              <table class="tbl tc">
+                <thead><tr><th style="width:76px">时间</th><th>命令</th>
+                  <th style="width:78px">层</th><th style="width:88px">判定</th></tr></thead>
+                <tbody>
+                  <tr style="background:rgba(217,99,90,.055)"><td class="mono">14:02:13</td>
+                    <td class="mono" style="color:var(--bad)">rm -rf /var/log/*</td>
+                    <td><span class="tag bad mono">L1</span></td><td><span class="tag bad">拒绝</span></td></tr>
+                  <tr><td class="mono">14:02:09</td><td class="mono">df -h</td>
+                    <td><span class="tag ok mono">ALL</span></td><td><span class="tag ok">放行</span></td></tr>
+                  <tr><td class="mono">14:01:57</td><td class="mono">free -m</td>
+                    <td><span class="tag ok mono">ALL</span></td><td><span class="tag ok">放行</span></td></tr>
+                  <tr style="background:rgba(216,164,63,.05)"><td class="mono">14:01:44</td><td class="mono">top</td>
+                    <td><span class="tag warn mono">L2</span></td><td><span class="tag warn">拒绝</span></td></tr>
+                  <tr style="background:rgba(217,99,90,.055)"><td class="mono">14:01:30</td><td class="mono">df -h; ls</td>
+                    <td><span class="tag bad mono">L3</span></td><td><span class="tag bad">拒绝</span></td></tr>
+                  <tr><td class="mono">14:01:12</td><td class="mono">journalctl --no-pager -n 50</td>
+                    <td><span class="tag ok mono">ALL</span></td><td><span class="tag ok">放行</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">06 · <b>命令校验器</b><span class="d">三层短路路径可视化</span></div>
+  </div>
+
+</div>
+<div class="row">
+
+  <!-- ============ 07 事件流审计 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 事件审计 · .sessions/session.jsonl</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag ok"><svg class="ic s"><use href="#i-check"/></svg>完整性校验通过</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni on"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div><h2>事件审计</h2>
+              <div class="sub">append-only JSONL · 412 条事件 · seq 1 → 412 严格递增</div></div>
+            <span class="sp"></span>
+            <span class="btn"><svg class="ic s"><use href="#i-filter"/></svg>筛选</span>
+            <span class="btn"><svg class="ic s"><use href="#i-download"/></svg>导出 JSONL</span>
+          </div>
+          <div class="bd">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+              <div class="kpi" style="padding:12px 14px"><div class="k">事件总数</div><div class="v" style="font-size:22px">412</div></div>
+              <div class="kpi" style="padding:12px 14px"><div class="k">事件类型</div><div class="v" style="font-size:22px">14<small>/ 14 封闭集</small></div></div>
+              <div class="kpi" style="padding:12px 14px"><div class="k">拦截事件</div><div class="v" style="font-size:22px;color:var(--bad)">47</div></div>
+              <div class="kpi" style="padding:12px 14px"><div class="k">完整性</div><div class="v" style="font-size:22px;color:var(--ok)">通过</div></div>
+            </div>
+
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div class="hd">
+                <h3>事件流</h3><span class="sp"></span>
+                <span class="chip on">全部</span><span class="chip">tool.*</span>
+                <span class="chip">permission.*</span><span class="chip">agent.*</span>
+                <span class="ic" style="color:var(--t4);margin-left:6px"><svg class="ic s"><use href="#i-search"/></svg></span>
+              </div>
+              <div style="overflow:hidden">
+                <table class="tbl tc">
+                  <thead><tr><th style="width:56px">SEQ</th><th style="width:76px">时间</th>
+                    <th style="width:172px">事件类型</th><th>data（脱敏后）</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono" style="color:var(--t4)">0001</td><td class="mono">14:02:11</td>
+                      <td><span class="tag mut mono">session.start</span></td><td class="mono">{"host":"demo-host","adapter":"mock"}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0002</td><td class="mono">14:02:11</td>
+                      <td><span class="tag ac mono">agent.input</span></td><td class="mono">{"input":"看看这台机器磁盘和内存使用情况"}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0003</td><td class="mono">14:02:11</td>
+                      <td><span class="tag ac mono">agent.think</span></td><td class="mono">{"step":1,"messages":2}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0004</td><td class="mono">14:02:11</td>
+                      <td><span class="tag mut mono">tool.before</span></td><td class="mono">{"tool":"ssh_execute","command":"df -h"}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0005</td><td class="mono">14:02:11</td>
+                      <td><span class="tag ok mono">permission.allowed</span></td><td class="mono">{"tool":"ssh_execute","command":"df -h"}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0006</td><td class="mono">14:02:11</td>
+                      <td><span class="tag mut mono">ssh.connect</span></td><td class="mono">{"host":"demo-host","user":"root","dry_run":true}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0007</td><td class="mono">14:02:12</td>
+                      <td><span class="tag mut mono">tool.after</span></td><td class="mono">{"tool":"ssh_execute","ok":true,"length":412}</td></tr>
+                    <tr style="background:rgba(217,99,90,.055)"><td class="mono" style="color:var(--t4)">0008</td><td class="mono">14:02:13</td>
+                      <td><span class="tag bad mono">permission.denied</span></td>
+                      <td class="mono" style="color:var(--bad)">{"tool":"ssh_execute","command":"rm -rf /var/log/*","layer":"L1"}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0009</td><td class="mono">14:02:13</td>
+                      <td><span class="tag bad mono">tool.after</span></td><td class="mono">{"tool":"ssh_execute","ok":false,"denied_by":"L1"}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0010</td><td class="mono">14:02:13</td>
+                      <td><span class="tag pur mono">context.compact</span></td><td class="mono">{"keep":20,"dropped":4}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0011</td><td class="mono">14:02:14</td>
+                      <td><span class="tag ac mono">agent.final</span></td><td class="mono">{"step":3,"length":186}</td></tr>
+                    <tr><td class="mono" style="color:var(--t4)">0012</td><td class="mono">14:02:14</td>
+                      <td><span class="tag mut mono">session.end</span></td><td class="mono">{"events":12,"denied":1}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card pad" style="display:flex;align-items:center;gap:16px">
+              <span class="btn pri" style="width:34px;height:34px;padding:0"><svg class="ic s"><use href="#i-play"/></svg></span>
+              <span style="font-family:var(--mono);font-size:11.5px;color:var(--t3)">0008 / 0012</span>
+              <span class="bar" style="flex:1;height:6px"><i style="width:66%"></i></span>
+              <span class="tag mut mono">1×</span>
+              <span class="tag mut mono">2×</span>
+              <span class="tag ac mono">4×</span>
+              <span class="btn sm gh"><svg class="ic s"><use href="#i-refresh"/></svg>从头回放</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">07 · <b>事件流审计</b><span class="d">append-only 表 + seq 完整性 + 回放控制条</span></div>
+  </div>
+
+  <!-- ============ 08 目标主机 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 目标主机</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag mut">DRY-RUN 模式</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni on"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div><h2>目标主机</h2>
+              <div class="sub">连接池按 (host, user) 复用 · 失败重试上限 3 次</div></div>
+            <span class="sp"></span>
+            <span class="btn pri"><svg class="ic s"><use href="#i-plus"/></svg>添加主机</span>
+          </div>
+          <div class="bd">
+            <div class="bnr warn">
+              <svg class="ic s"><use href="#i-alert"/></svg>
+              <span><b>当前为 dry-run 模式</b>：SSH 走假连接，不会触碰真实主机。接入生产前请配置凭证（建议用环境变量，勿写明文）。</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+              <div class="card hv pad" style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span class="ico" style="width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--bg-3);border:1px solid var(--line-2);color:var(--t2)"><svg class="ic s"><use href="#i-server"/></svg></span>
+                  <div style="flex:1"><div class="mono" style="font-size:13px;font-weight:600">demo-host</div>
+                    <div class="mono" style="font-size:10.5px;color:var(--t4)">dry-run · 假连接</div></div>
+                  <span class="tag info">DRY</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px">
+                  <div><div class="lbl">用户</div><div class="mono" style="margin-top:3px">root</div></div>
+                  <div><div class="lbl">端口</div><div class="mono" style="margin-top:3px">22</div></div>
+                  <div><div class="lbl">池占用</div><div class="mono" style="margin-top:3px">1 / 5</div></div>
+                  <div><div class="lbl">最近会话</div><div class="mono" style="margin-top:3px">2 分钟前</div></div>
+                </div>
+              </div>
+
+              <div class="card hv pad" style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span class="ico" style="width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--bg-3);border:1px solid var(--line-2);color:var(--t2)"><svg class="ic s"><use href="#i-server"/></svg></span>
+                  <div style="flex:1"><div class="mono" style="font-size:13px;font-weight:600">10.0.1.24</div>
+                    <div class="mono" style="font-size:10.5px;color:var(--t4)">生产 · web-01</div></div>
+                  <span class="tag ok"><span class="dot ok"></span>在线</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px">
+                  <div><div class="lbl">用户</div><div class="mono" style="margin-top:3px">ops</div></div>
+                  <div><div class="lbl">端口</div><div class="mono" style="margin-top:3px">2222</div></div>
+                  <div><div class="lbl">延迟</div><div class="mono" style="margin-top:3px;color:var(--ok)">18ms</div></div>
+                  <div><div class="lbl">最近会话</div><div class="mono" style="margin-top:3px">1 小时前</div></div>
+                </div>
+              </div>
+
+              <div class="card hv pad" style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span class="ico" style="width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--bg-3);border:1px solid var(--line-2);color:var(--t2)"><svg class="ic s"><use href="#i-server"/></svg></span>
+                  <div style="flex:1"><div class="mono" style="font-size:13px;font-weight:600">10.0.2.7</div>
+                    <div class="mono" style="font-size:10.5px;color:var(--t4)">生产 · db-01</div></div>
+                  <span class="tag bad"><span class="dot bad"></span>连接失败</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px">
+                  <div><div class="lbl">用户</div><div class="mono" style="margin-top:3px">ops</div></div>
+                  <div><div class="lbl">重试</div><div class="mono" style="margin-top:3px;color:var(--bad)">3 / 3</div></div>
+                  <div><div class="lbl">最近错误</div><div class="mono" style="margin-top:3px;color:var(--bad)">timeout</div></div>
+                  <div><div class="lbl">最近会话</div><div class="mono" style="margin-top:3px">3 小时前</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">
+              <div class="card">
+                <div class="hd"><h3>连接池状态</h3><span class="sp"></span><span class="lbl">POOL SIZE 5</span></div>
+                <div class="pad">
+                  <div class="hb">
+                    <div class="r"><span class="n" style="width:132px">demo-host/root</span><span class="t"><i style="width:20%;background:var(--info)"></i></span><span class="v">1/5</span></div>
+                    <div class="r"><span class="n" style="width:132px">10.0.1.24/ops</span><span class="t"><i style="width:0%;background:var(--ok)"></i></span><span class="v">0/5</span></div>
+                    <div class="r"><span class="n" style="width:132px">10.0.2.7/ops</span><span class="t"><i style="width:0%;background:var(--bad)"></i></span><span class="v">0/5</span></div>
+                  </div>
+                  <div class="bnr info" style="margin-top:16px">
+                    <svg class="ic s"><use href="#i-clock"/></svg>
+                    <span>连接超时 <span class="mono">10s</span> · 命令超时 <span class="mono">15s</span> · 重试上限 <span class="mono">3</span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="hd"><h3>认证方式</h3><span class="sp"></span><span class="btn sm gh">管理</span></div>
+                <table class="tbl tc">
+                  <thead><tr><th>主机</th><th>方式</th><th>凭证来源</th><th>状态</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">demo-host</td><td>无</td><td class="mono" style="color:var(--t4)">—</td><td><span class="tag info">假连接</span></td></tr>
+                    <tr><td class="mono">10.0.1.24</td><td>私钥</td><td class="mono">${SSH_KEY_WEB}</td><td><span class="tag ok">已配置</span></td></tr>
+                    <tr><td class="mono">10.0.2.7</td><td>私钥</td><td class="mono" style="color:var(--warn)">未设置</td><td><span class="tag warn">待配置</span></td></tr>
+                  </tbody>
+                </table>
+                <div class="bnr warn" style="margin:14px 16px 16px">
+                  <svg class="ic s"><use href="#i-key"/></svg>
+                  <span>凭证仅从环境变量展开，<b>不落盘、不写入事件流</b>。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">08 · <b>目标主机</b><span class="d">主机卡 · 连接池 · 凭证来源</span></div>
+  </div>
+
+  <!-- ============ 09 内核 · 插件与能力 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 内核 · 插件与能力</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag ok">8 插件已加载 · 拓扑排序完成</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni on"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div><h2>内核 · 插件与能力</h2>
+              <div class="sub">Kernel 只负责加载 / 卸载 / 依赖拓扑 —— 不含任何业务逻辑</div></div>
+            <span class="sp"></span>
+            <span class="tag ac">新增能力 = 新增插件</span>
+          </div>
+          <div class="bd">
+            <div style="display:grid;grid-template-columns:376px 1fr;gap:14px">
+              <div class="card">
+                <div class="hd"><h3>已加载插件</h3><span class="sp"></span><span class="lbl">8</span></div>
+                <table class="tbl tc">
+                  <thead><tr><th>插件</th><th style="width:64px">版本</th><th style="width:74px">状态</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">session_store</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">tool_registry</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">permission_pipeline</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">ssh_pool</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">ssh_execute</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">ssh_read_file</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">ssh_list_dir</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">mock_adapter</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                    <tr><td class="mono">agent_loop</td><td class="mono" style="color:var(--t4)">0.1.0</td><td><span class="tag ok">已加载</span></td></tr>
+                  </tbody>
+                </table>
+                <div class="bnr ok" style="margin:10px 16px 12px">
+                  <svg class="ic s"><use href="#i-check"/></svg>
+                  <span>所有插件均登记了 <span class="mono">on_unload</span> 撤销动作，卸载时可完全回滚。</span>
+                </div>
+              </div>
+
+              <div class="card" style="display:flex;flex-direction:column">
+                <div class="hd"><h3>能力依赖拓扑</h3><span class="sp"></span>
+                  <span class="tag ac">requires →</span><span class="tag pur">事件流订阅</span></div>
+                <div class="pad" style="flex:1;overflow:hidden;position:relative">
+                  <div class="topo" style="width:660px;height:240px">
+                    <svg width="660" height="240" viewBox="0 0 660 240" style="position:absolute;left:0;top:0">
+                      <path d="M184,85 C216,85 216,57 250,57"/>
+                      <path d="M184,85 C216,85 216,105 250,105"/>
+                      <path d="M184,85 C220,85 214,153 250,153"/>
+                      <path d="M184,197 C226,197 214,57 250,57"/>
+                      <path d="M184,197 C226,197 224,105 250,105"/>
+                      <path d="M184,197 C224,197 224,153 250,153"/>
+                      <path class="hi" d="M184,141 C300,141 330,129 476,129"/>
+                      <path d="M414,57 C446,57 446,129 476,129"/>
+                      <path d="M414,105 C446,105 446,129 476,129"/>
+                      <path d="M414,153 C446,153 446,129 476,129"/>
+                      <path d="M414,209 C446,209 446,146 476,146"/>
+                      <path d="M100,46 C100,64 100,68 100,68" style="stroke:rgba(155,126,217,.5);stroke-dasharray:3 3"/>
+                    </svg>
+                    <span class="nd" style="left:16px;top:12px;width:168px">
+                      <svg class="ic s" style="color:var(--pur)"><use href="#i-database"/></svg>session_store
+                      <span class="tag pur" style="margin-left:auto;font-size:9px;padding:1px 5px">✻</span></span>
+                    <span class="nd" style="left:16px;top:68px;width:168px">
+                      <svg class="ic s" style="color:var(--t3)"><use href="#i-list"/></svg>tool_registry</span>
+                    <span class="nd" style="left:16px;top:124px;width:168px">
+                      <svg class="ic s" style="color:var(--t3)"><use href="#i-shield"/></svg>permission_pipeline</span>
+                    <span class="nd" style="left:16px;top:180px;width:168px">
+                      <svg class="ic s" style="color:var(--t3)"><use href="#i-globe"/></svg>ssh_pool</span>
+                    <span class="nd" style="left:250px;top:40px;width:164px">
+                      <svg class="ic s" style="color:var(--t3)"><use href="#i-terminal"/></svg>ssh_execute</span>
+                    <span class="nd" style="left:250px;top:88px;width:164px">
+                      <svg class="ic s" style="color:var(--t3)"><use href="#i-file"/></svg>ssh_read_file</span>
+                    <span class="nd" style="left:250px;top:136px;width:164px">
+                      <svg class="ic s" style="color:var(--t3)"><use href="#i-grid"/></svg>ssh_list_dir</span>
+                    <span class="nd" style="left:250px;top:192px;width:164px">
+                      <svg class="ic s" style="color:var(--warn)"><use href="#i-plug"/></svg>mock_adapter</span>
+                    <span class="nd hi" style="left:476px;top:112px;width:164px">
+                      <svg class="ic s"><use href="#i-zap"/></svg>agent_loop</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div class="hd"><h3>能力注册表</h3><span class="sp"></span><span class="lbl">CAPABILITY → PROVIDER</span></div>
+              <div class="pad" style="display:flex;gap:9px;flex-wrap:wrap;align-content:flex-start">
+                <span class="tag mut mono">session_store ← session_store</span>
+                <span class="tag mut mono">tool_registry ← tool_registry</span>
+                <span class="tag mut mono">permission_pipeline ← permission_pipeline</span>
+                <span class="tag mut mono">ssh_pool ← ssh_pool</span>
+                <span class="tag mut mono">model_adapter ← mock_adapter</span>
+                <span class="tag ac mono">agent_loop ← agent_loop</span>
+              </div>
+              <div class="bnr info" style="margin:0 16px 10px">
+                <svg class="ic s"><use href="#i-branch"/></svg>
+                <span>能力被重复提供时内核会告警 —— 插件声明提供但未注册也会被检出，尽早暴露装配错误。</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">09 · <b>内核 · 插件与能力</b><span class="d">插件表 + 依赖拓扑图 + 能力注册表</span></div>
+  </div>
+
+</div>
+<div class="row">
+
+  <!-- ============ 10 模型适配器 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 模型适配器</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag mut mono">adapter = mock</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni on"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div><h2>模型适配器</h2>
+              <div class="sub">适配器即插件 · 切换会重建 Kernel（事件订阅自动撤销重挂）</div></div>
+            <span class="sp"></span>
+            <span class="btn"><svg class="ic s"><use href="#i-refresh"/></svg>连通性测试</span>
+          </div>
+          <div class="bd">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="card hv" style="border-color:var(--ac-bd);background:linear-gradient(160deg,rgba(109,143,255,.06),transparent 60%)">
+                <div class="hd"><span class="ico" style="width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:var(--warn);background:var(--warn-bg)"><svg class="ic s"><use href="#i-plug"/></svg></span>
+                  <h3>mock</h3><span class="sp"></span><span class="tag ac"><svg class="ic s"><use href="#i-check"/></svg>使用中</span></div>
+                <div class="pad">
+                  <div style="font-size:12px;color:var(--t2);line-height:1.7">
+                    离线演示剧本（查磁盘 → 试删除 → 总结）。<b style="color:var(--t1)">用途是演示权限拦截，不是真诊断。</b>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;font-size:11.5px">
+                    <div><div class="lbl">依赖</div><div style="margin-top:3px">无 · 完全离线</div></div>
+                    <div><div class="lbl">API Key</div><div style="margin-top:3px">不需要</div></div>
+                    <div><div class="lbl">函数调用</div><div style="margin-top:3px">支持</div></div>
+                    <div><div class="lbl">适用场景</div><div style="margin-top:3px">演示 / 测试 / CI</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card hv">
+                <div class="hd"><span class="ico" style="width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:var(--info);background:var(--info-bg)"><svg class="ic s"><use href="#i-globe"/></svg></span>
+                  <h3>deepseek</h3><span class="sp"></span><span class="tag mut">未启用</span></div>
+                <div class="pad">
+                  <div style="font-size:12px;color:var(--t2);line-height:1.7">
+                    OpenAI 兼容接口的真实模型。启用前需在环境变量中提供 <span class="mono" style="color:var(--t1)">DEEPSEEK_API_KEY</span>。
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;font-size:11.5px">
+                    <div><div class="lbl">模型</div><div class="mono" style="margin-top:3px">deepseek-chat</div></div>
+                    <div><div class="lbl">Base URL</div><div class="mono" style="margin-top:3px;font-size:10.5px">api.deepseek.com</div></div>
+                    <div><div class="lbl">超时</div><div class="mono" style="margin-top:3px">60s</div></div>
+                    <div><div class="lbl">适用场景</div><div style="margin-top:3px">真实诊断</div></div>
+                  </div>
+                  <div class="bnr warn" style="margin-top:14px">
+                    <svg class="ic s"><use href="#i-key"/></svg>
+                    <span>未检测到 API Key。Key 仅用于判断<b>是否存在</b>，不会被读取或回显。</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="hd"><h3>运行参数</h3><span class="sp"></span><span class="lbl">configs/default.yaml</span></div>
+              <div class="pad" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+                <div class="fld"><label>temperature</label><div class="inp mono">0.0</div>
+                  <span style="font-size:10.5px;color:var(--t4)">运维诊断需确定性</span></div>
+                <div class="fld"><label>max_steps</label><div class="inp mono">8</div>
+                  <span style="font-size:10.5px;color:var(--t4)">ReAct 最大步数</span></div>
+                <div class="fld"><label>keep_recent</label><div class="inp mono">20</div>
+                  <span style="font-size:10.5px;color:var(--t4)">上下文保留条数</span></div>
+                <div class="fld"><label>max_tool_output_chars</label><div class="inp mono">4000</div>
+                  <span style="font-size:10.5px;color:var(--t4)">单次工具输出截断</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div class="hd"><h3>适配器契约</h3><span class="sp"></span><span class="tag ac mono">ModelAdapter</span></div>
+              <div class="pad">
+                <div class="code" style="margin:0">async def chat(messages: list[Message], tools: list[Tool]) -> Response
+def supports_function_calling() -> bool</div>
+                <div class="bnr info" style="margin-top:14px">
+                  <svg class="ic s"><use href="#i-box"/></svg>
+                  <span>新增模型只需实现上面两个方法并注册为插件 —— <b>Agent 主循环一行都不用改</b>。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">10 · <b>模型适配器</b><span class="d">适配器切换 · 参数 · 契约</span></div>
+  </div>
+
+  <!-- ============ 11 权限规则编辑器 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 权限规则编辑器</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag warn"><svg class="ic s"><use href="#i-alert"/></svg>3 处未保存</span></span>
+      </div>
+      <div class="app">
+        <div class="side">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni"><svg class="ic"><use href="#i-database"/></svg>会话记录<span class="bdg">128</span></span>
+          <div class="gl">安全</div>
+          <span class="ni on"><svg class="ic"><use href="#i-shield"/></svg>权限分层<span class="bdg">121</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni"><svg class="ic"><use href="#i-list"/></svg>事件审计<span class="bdg bad">47</span></span>
+          <div class="gl">基础设施</div>
+          <span class="ni"><svg class="ic"><use href="#i-server"/></svg>目标主机<span class="bdg">3</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-chip"/></svg>内核插件<span class="bdg">8</span></span>
+          <span class="ni"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="ph">
+            <div><h2>权限规则</h2>
+              <div class="sub">configs/permission_rules.yaml · L1 黑名单 / L2 白名单 / L3 注入检测</div></div>
+            <span class="sp"></span>
+            <span class="btn gh">还原</span>
+            <span class="btn pri"><svg class="ic s"><use href="#i-check"/></svg>保存并重载</span>
+          </div>
+          <div class="bd">
+            <div class="bnr warn">
+              <svg class="ic s"><use href="#i-alert"/></svg>
+              <span><b>修改权限规则会直接影响安全边界。</b>默认规则经绕过测试验证，非必要不要改动 —— 新增规则请配套补充单测。</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 330px;gap:14px;flex:1;min-height:0">
+              <div class="card" style="display:flex;flex-direction:column;overflow:hidden">
+                <div class="hd"><h3>L2 命令白名单</h3><span class="sp"></span>
+                  <span class="chip on">L1</span><span class="chip on">L2</span><span class="chip on">L3</span>
+                  <span class="btn sm gh" style="margin-left:6px"><svg class="ic s"><use href="#i-plus"/></svg>新增</span></div>
+                <div style="overflow:hidden">
+                  <table class="tbl rl-tbl tc">
+                    <thead><tr><th style="width:38px"></th><th>命令</th><th style="width:104px">允许子命令</th>
+                      <th style="width:104px">约束</th><th style="width:56px"></th></tr></thead>
+                    <tbody>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">df</span></td>
+                        <td class="mono" style="color:var(--t4)">—</td><td class="mono" style="font-size:10.5px">只读</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">free</span></td>
+                        <td class="mono" style="color:var(--t4)">—</td><td class="mono" style="font-size:10.5px">只读</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">ps</span></td>
+                        <td class="mono" style="color:var(--t4)">—</td><td class="mono" style="font-size:10.5px">只读</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr style="background:rgba(216,164,63,.05)"><td><span class="tag warn">!</span></td><td><span class="pat">top</span></td>
+                        <td class="mono" style="color:var(--warn)">-b</td><td class="mono" style="font-size:10.5px;color:var(--warn)">强制 -b</td>
+                        <td><svg class="ic s" style="color:var(--warn)"><use href="#i-edit"/></svg></td></tr>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">journalctl</span></td>
+                        <td class="mono" style="font-size:10.5px;color:var(--t4)">--no-pager</td><td class="mono" style="font-size:10.5px">只读</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">ls</span></td>
+                        <td class="mono" style="color:var(--t4)">—</td><td class="mono" style="font-size:10.5px">只读</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">cat</span></td>
+                        <td class="mono" style="color:var(--t4)">—</td><td class="mono" style="font-size:10.5px">只读</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr><td><span class="tag ok">✓</span></td><td><span class="pat">systemctl</span></td>
+                        <td class="mono" style="font-size:10.5px;color:var(--ok)">status/is-active</td><td class="mono" style="font-size:10.5px">禁 restart</td>
+                        <td><svg class="ic s" style="color:var(--t4)"><use href="#i-edit"/></svg></td></tr>
+                      <tr style="background:rgba(255,255,255,.03)"><td><span class="tag mut">+</span></td>
+                        <td class="mono" style="color:var(--t4)">新增一条只读命令…</td>
+                        <td class="mono" style="color:var(--t4)">—</td><td class="mono" style="color:var(--t4)">—</td><td></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="card" style="display:flex;flex-direction:column">
+                <div class="hd"><h3>编辑规则</h3><span class="sp"></span>
+                  <svg class="ic s" style="color:var(--t4)"><use href="#i-x"/></svg></div>
+                <div class="pad" style="display:flex;flex-direction:column;gap:13px;flex:1">
+                  <div class="fld"><label>所属层</label>
+                    <div class="inp" style="justify-content:space-between">L2 · 命令白名单
+                      <svg class="ic s" style="color:var(--t4)"><use href="#i-chev-d"/></svg></div></div>
+                  <div class="fld"><label>命令</label><div class="inp mono">top</div></div>
+                  <div class="fld"><label>必须携带的参数</label><div class="inp mono">-b</div>
+                    <span style="font-size:10.5px;color:var(--t4)">不带该参数将拒绝 —— 交互式命令会挂住会话</span></div>
+                  <div class="fld"><label>拒绝的子命令</label>
+                    <div class="inp" style="height:auto;min-height:34px;flex-wrap:wrap;gap:5px;padding:7px 9px">
+                      <span class="tag bad" style="gap:4px">restart <svg class="ic" style="width:10px;height:10px"><use href="#i-x"/></svg></span>
+                      <span class="tag bad" style="gap:4px">stop <svg class="ic" style="width:10px;height:10px"><use href="#i-x"/></svg></span>
+                      <span class="tag bad" style="gap:4px">disable <svg class="ic" style="width:10px;height:10px"><use href="#i-x"/></svg></span>
+                    </div></div>
+                  <div class="fld"><label>备注</label>
+                    <div class="inp" style="height:auto;min-height:56px;align-items:flex-start;padding:9px 12px;line-height:1.6">
+                      <span style="font-size:12.5px;color:var(--t2)">避免阻塞会话；systemctl 只允许只读子命令。</span></div></div>
+                  <div class="bnr ok" style="margin-top:auto">
+                    <svg class="ic s"><use href="#i-check"/></svg>
+                    <span>该规则已通过 3 项绕过测试（<span class="mono">top</span> / <span class="mono">top -n1</span> / <span class="mono">/usr/bin/top</span>）。</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">11 · <b>权限规则编辑器</b><span class="d">规则表 + 编辑抽屉 + 绕过测试提示</span></div>
+  </div>
+
+  <!-- ============ 12 空状态 / 后端断开 ============ -->
+  <div class="cap">
+    <div class="win">
+      <div class="chrome">
+        <span class="lt"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="ti"><b>OpsAgent</b> — 未连接</span>
+        <span class="sp"></span>
+        <span class="rt"><span class="tag bad"><span class="dot bad"></span>sidecar 已退出</span></span>
+      </div>
+      <div class="app">
+        <div class="side" style="opacity:.42">
+          <div class="brand">
+            <span class="mk"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg></span>
+            <div><div class="nm">OpsAgent</div><div class="vr">v0.1.0 · console</div></div>
+          </div>
+          <div class="gl">监控</div>
+          <span class="ni dis"><svg class="ic"><use href="#i-grid"/></svg>控制台</span>
+          <span class="ni dis"><svg class="ic"><use href="#i-terminal"/></svg>执行</span>
+          <span class="ni dis"><svg class="ic"><use href="#i-database"/></svg>会话记录</span>
+          <div class="gl">安全</div>
+          <span class="ni dis"><svg class="ic"><use href="#i-shield"/></svg>权限分层</span>
+          <span class="ni dis"><svg class="ic"><use href="#i-terminal-2"/></svg>命令校验器</span>
+          <span class="ni dis"><svg class="ic"><use href="#i-list"/></svg>事件审计</span>
+          <div class="gl">基础设施</div>
+          <span class="ni dis"><svg class="ic"><use href="#i-server"/></svg>目标主机</span>
+          <span class="ni dis"><svg class="ic"><use href="#i-chip"/></svg>内核插件</span>
+          <span class="ni dis"><svg class="ic"><use href="#i-plug"/></svg>模型适配器</span>
+          <div class="ft"><span class="ni dis"><svg class="ic"><use href="#i-sliders"/></svg>设置</span></div>
+        </div>
+        <div class="main">
+          <div class="bd" style="padding:24px;gap:16px">
+            <div class="empty">
+              <div class="or"><svg class="ic" style="width:34px;height:34px"><use href="#i-plug-off"/></svg></div>
+              <h3>Python 后端未连接</h3>
+              <p>sidecar 进程已退出，控制台无法读取内核状态。所有依赖后端的操作已自动禁用 —— 不会显示过期的缓存数据。</p>
+              <div style="display:flex;gap:10px;margin-top:26px">
+                <span class="btn pri" style="height:38px;padding:0 18px"><svg class="ic s"><use href="#i-refresh"/></svg>重新启动后端</span>
+                <span class="btn" style="height:38px;padding:0 18px">查看启动日志</span>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:auto">
+              <div class="hd"><h3>诊断信息</h3><span class="sp"></span><span class="lbl">DIAGNOSTICS</span></div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0">
+                <div class="pad" style="border-right:1px solid var(--line)">
+                  <div class="lbl">尝试过的启动方式</div>
+                  <div class="mono" style="font-size:11px;line-height:2;margin-top:8px;color:var(--t2)">
+                    <div><span style="color:var(--bad)">✗</span> .venv/Scripts/python.exe</div>
+                    <div><span style="color:var(--bad)">✗</span> ops-agent-bridge (PATH)</div>
+                    <div><span style="color:var(--bad)">✗</span> python -m ops_agent.bridge.sidecar</div>
+                  </div>
+                </div>
+                <div class="pad" style="border-right:1px solid var(--line)">
+                  <div class="lbl">退出码 / 最后一行 stderr</div>
+                  <div class="mono" style="font-size:11px;line-height:1.9;margin-top:8px;color:var(--t2)">
+                    <div>code = <span style="color:var(--bad)">1</span></div>
+                    <div style="color:var(--warn);word-break:break-all">ImportError: No module named 'ops_agent'</div>
+                  </div>
+                </div>
+                <div class="pad">
+                  <div class="lbl">修复建议</div>
+                  <div style="font-size:11.5px;line-height:1.85;margin-top:8px;color:var(--t2)">
+                    在仓库根目录执行<br>
+                    <span class="mono" style="color:var(--t1)">pip install -e ".[dev]"</span><br>
+                    后重试。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-tag">12 · <b>空状态 / 后端断开</b><span class="d">错误态 + 可执行的诊断信息</span></div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>
