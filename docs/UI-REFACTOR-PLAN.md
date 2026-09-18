@@ -700,17 +700,19 @@ Phase 3 按屏逐个提交（每屏一个 commit，便于回退），Phase 4 独
 
 ### 执行顺序（本次开工）
 
-```
-① 提交并推送现状（design/ + docs/）
-② Phase 0  令牌与样式地基
-③ Phase 1  外壳重构（自绘标题栏 + 三栏骨架 + 10 项导航）
-④ Phase 2  复用现有三屏（时间线 / 权限 / 校验器）
-⑤ Phase 3  新增 9 屏（含规则编辑器可写形态）
-⑥ Phase 4  补 7 个 RPC：stats / hosts / sessions / kernelTopology
-           / config / runMeta / rulesDiff + rulesSave
-⑦ Phase 5  像素级校对
-⑧ Phase 6  文档收尾
-```
+| # | 阶段 | 状态 |
+| :--- | :--- | :--- |
+| ① | 提交并推送现状（design/ + docs/） | ✅ `7ee8789` |
+| ② | Phase 0 令牌与样式地基 | ✅ `7209be9` |
+| ③ | Phase 1 外壳重构（自绘标题栏 + 三栏骨架 + 10 项导航） | ✅ `7209be9` |
+| ④ | Phase 2 复用现有三屏（时间线 / 权限 / 校验器） | ✅ `7209be9` |
+| ⑤ | Phase 3 新增 9 屏（含规则编辑器可写形态） | ✅ `7209be9` |
+| ⑥ | Phase 4 补 7 个 RPC：stats / hosts / sessions / kernelTopology / config / runMeta / rulesDiff + rulesSave | ⏳ 待做 |
+| ⑦ | Phase 5 像素级校对 | ⏳ 部分完成（12 屏已逐屏截图比对，待与真实数据联调后复验） |
+| ⑧ | Phase 6 文档收尾 | ✅ desktop/README.md 已更新 |
 
 > Phase 3 结束时 12 屏全部可达；未接后端的区域一律走 `[PLACEHOLDER]` 分支
 > 并**在界面上标注为示例**，Phase 4 逐项替换为真实数据。
+>
+> **附加产物**：`desktop/lib/preview.ts` + `bridge.ts` —— DEV 且非 Tauri 时挂替身后端，
+> 12 屏可不经编译 Rust 直接在浏览器审阅（`npm run dev`），生产构建摇树移除。

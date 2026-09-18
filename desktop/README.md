@@ -206,6 +206,30 @@ rustup target add x86_64-pc-windows-gnu
 cargo +stable-x86_64-pc-windows-gnu check
 ```
 
+### ⚠️ release 构建在沙箱/受限环境里会崩
+
+症状：`cargo build --release` 时 `rustc.exe` 或刚编译出的 **build script**
+以 `exit code: 0xc0000005, STATUS_ACCESS_VIOLATION` 崩溃，且**每次崩在**不同位置。
+debug 构建完全正常。
+
+根因不是代码 —— release profile 的 `strip = true` 会被 cargo 应用到
+proc-macro / build-script 的编译（命令行里能看到 `-C strip=symbols`），
+在 Windows MSVC 上这是已知的 rustc 崩溃源；此外受限环境还可能阻止
+**执行**刚写出来的二进制（build script 本身要跑）。
+
+本项目实测的修法（环境变量覆盖，不动 Cargo.toml）：
+
+```bash
+CARGO_INCREMENTAL=0 \
+CARGO_PROFILE_RELEASE_STRIP=none \
+CARGO_PROFILE_RELEASE_LTO=off \
+CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 \
+cargo build --release --features custom-protocol -j 2
+```
+
+另外务必**在非沙箱的前台终端里跑**：本项目实测同一命令在沙箱后台必崩、
+前台直接通过（约 4 分钟）。产物 5.3 MB（debug 是 18 MB）。
+
 ## 后端是怎么被拉起来的
 
 `sidecar.rs` 按优先级尝试三种启动方式，命中即用：
