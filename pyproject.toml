@@ -25,6 +25,8 @@ dev = [
 
 [project.scripts]
 ops-agent = "ops_agent.cli:main"
+# 桌面端 sidecar：从 stdin 读 NDJSON 请求，往 stdout 写响应与事件
+ops-agent-bridge = "ops_agent.bridge.sidecar:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -32,12 +34,15 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+# 只收 Python 测试；desktop/ 是独立的 Tauri 前端工程，不参与 pytest 采集
 testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# desktop/ 是 Tauri 前端（node_modules 由 npm 管理），不参与 Python lint
+exclude = ["desktop", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "BLE"]

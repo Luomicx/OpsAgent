@@ -42,3 +42,10 @@ configs/*.local.yaml
 .env
 .env.*
 !.env.example
+
+# --- 桌面端（desktop/，Tauri + React）---
+desktop/node_modules/
+desktop/dist/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/schemas/
+*.tsbuildinfo

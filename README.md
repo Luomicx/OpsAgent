@@ -5,10 +5,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-129%20passed-brightgreen.svg)](#测试)
-[![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen.svg)](#测试)
+[![Tests](https://img.shields.io/badge/tests-198%20passed-brightgreen.svg)](#测试)
+[![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen.svg)](#测试)
 [![Ruff](https://img.shields.io/badge/lint-ruff%20clean-success.svg)](https://github.com/astral-sh/ruff)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Desktop](https://img.shields.io/badge/desktop-Tauri%20%2B%20React-24C8DB?logo=tauri)](./desktop)
 
 [![Repo](https://img.shields.io/badge/GitHub-Luomicx%2FOpsAgent-181717?logo=github)](https://github.com/Luomicx/OpsAgent)
 
@@ -22,6 +23,7 @@
 - [设计理念](#设计理念)
 - [目录结构](#目录结构)
 - [快速开始](#快速开始)
+- [桌面客户端](#桌面客户端)
 - [使用示例](#使用示例)
 - [权限分层](#权限分层)
 - [事件流与审计](#事件流与审计)
@@ -57,6 +59,7 @@ OpsAgent 的出发点是把 **Agent 工程化架构** 与 **真实运维场景**
 | **可逆副作用** | 插件对内核的任何修改都必须登记撤销动作，卸载时倒序清理 |
 | **可替换模型适配器** | 适配器即插件，内置 DeepSeek 与离线 Mock，新增模型不改核心 |
 | **异步 SSH 引擎** | 基于 AsyncSSH，连接池复用 + 失败重试上限保护 |
+| **桌面客户端** | Tauri + React，实时事件流时间线，让权限拦截可视化（核心零改动接入） |
 
 ## 架构总览
 
@@ -86,7 +89,7 @@ OpsAgent 的出发点是把 **Agent 工程化架构** 与 **真实运维场景**
 **一次工具调用的完整链路**（权限是强制检查点，没有例外）：
 
 ```text
-用户输入
+用户输入（CLI 或桌面端）
    │
    ▼
 Agent Loop ──► LLM 决定调用工具
@@ -104,6 +107,18 @@ PermissionPipeline.acheck()   ← 强制检查点
          │
          ▼
    结果写入会话事件流（append-only JSONL）
+```
+
+**两种前端形态共用同一套核心**，核心代码零改动：
+
+```text
+                    ┌──────────────────┐
+   CLI ────────────►│                  │
+                    │  ops_agent 核心   │
+   desktop ────────►│  (Kernel + 插件)  │
+   (Tauri)  ▲       └──────────────────┘
+            │  stdio NDJSON
+       bridge/ (JSON-RPC sidecar)
 ```
 
 ## 设计理念
@@ -195,12 +210,29 @@ OpsAgent/
 │       ├── agent/                   # Agent Loop
 │       │   ├── loop.py              # ReAct 主循环
 │       │   └── prompts.py           # 系统提示词
+│       ├── bridge/                  # 桌面端桥接（stdio JSON-RPC sidecar）
+│       │   ├── protocol.py          # NDJSON 分帧、消息构造、错误码
+│       │   ├── pending.py           # 待决请求表 + 协作式取消
+│       │   ├── serialize.py         # 领域对象 → 前端 JSON（含出站脱敏）
+│       │   ├── server.py            # RPC 方法实现，驱动 Kernel + 事件泵
+│       │   └── sidecar.py           # stdio 传输层与进程入口
 │       ├── config.py                # 配置加载 + ${ENV} 展开
 │       ├── runtime.py               # 默认插件集组装
 │       └── cli.py                   # 入口
 ├── configs/
 │   ├── default.yaml                 # 主配置
 │   └── permission_rules.yaml        # 权限规则快照
+├── desktop/                         # 桌面客户端（Tauri + React）
+│   ├── README.md
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── scripts/generate_icons.py    # 图标生成（可复现，不塞二进制）
+│   ├── src/                         # 前端：components / lib / styles
+│   └── src-tauri/                   # Rust 外壳：lib.rs / sidecar.rs
+├── docs/
+│   └── INTERVIEW.md                 # 项目亮点与面试指南
+├── examples/
+│   └── mock_demo.py                 # 离线测试三种写法演示
 └── tests/                           # 与 src/ 镜像对应
     ├── kernel/
     ├── permission/
@@ -208,6 +240,7 @@ OpsAgent/
     ├── tools/
     ├── session/
     ├── context/
+    ├── bridge/                      # 协议 / 集成 / sidecar 端到端
     ├── test_cli.py
     └── test_smoke.py
 ```
@@ -275,6 +308,39 @@ ops-agent --host 192.168.1.10 -p "看看磁盘和内存使用情况"
 # 零配置离线体验（Mock 模型 + 假 SSH，含一次被拦截的写操作演示）
 ops-agent --adapter mock --dry-run --host demo-host -p "查一下磁盘"
 ```
+
+## 桌面客户端
+
+除 CLI 外，仓库还带一个 **Tauri + React** 桌面客户端（`desktop/`）。
+它把「推理 → 工具调用 → 权限校验 → 结论」的完整过程做成可视化时间线，
+**让安全拦截看得见**，而不是埋在日志里。
+
+```bash
+cd desktop
+npm install
+npm run tauri:dev          # 开发模式（热重载）
+npm run tauri:build        # 打包成原生可执行文件
+```
+
+**界面由三块组成**：
+
+| 视图 | 作用 |
+| :--- | :--- |
+| **执行时间线** | 实时事件流。工具调用、权限放行、**拦截**（红色高亮并自动展开）、最终结论 |
+| **权限分层** | 浏览 L1/L2/L3 的全部规则（当前 121 条） |
+| **命令校验器** | 不连主机，直接把命令喂给权限流水线看结果 —— 理解权限引擎最快的方式 |
+
+**架构（核心零改动）**：
+
+```text
+React ──Tauri IPC──► Rust 外壳 ──stdin/stdout NDJSON──► Python bridge ──► Kernel
+                     (只搬字节)                          (JSON-RPC sidecar)
+```
+
+桥接层只是 `build_kernel()` 的**又一个消费者** —— 没有修改任何既有模块。
+之所以选 stdio 而不是本地 HTTP：不开监听端口、无防火墙弹窗、进程即权限边界。
+
+详见 [`desktop/README.md`](./desktop/README.md)。
 
 ## 使用示例
 
@@ -357,8 +423,20 @@ ops-agent --show-permission
 设计要点：
 
 - **纵深防御**：即便 L2 被关闭（`whitelist_only: false`），L3 仍能兜底拦截注入。
-- **防变形**：L1 对命令做归一化（去多余空白、大小写折叠）后再匹配，避免 `rm   -rf` 这类变体绕过。
+- **防变形**：L1 采用**正则 + 字面量双路匹配**，`rm -fr /`（参数序变体）、`rm  -rf  /`（多空格）、`/bin/rm -rf /`（绝对路径）均被拦下。
 - **配置与代码分离**：规则可在 `configs/permission_rules.yaml` 中覆盖，但**默认规则不得随意修改**（见 `AGENTS.md`）。
+
+### 已知安全边界
+
+> ⚠️ 补 L5 之前，**不要把本项目指向含敏感数据的主机**。
+
+**L1–L3 检查的是「命令」，没有任何一层检查「路径」。** 因此 `cat` 这类合法只读命令
+指向敏感文件时不会被拦下 —— 实测 `cat /etc/shadow`、`cat ~/.ssh/id_rsa`、
+`find / -name '*.key'` 均**通过全部三层校验**。
+
+这是**架构层面的空白**（正是 L5 要解决的），而非配置疏漏：一旦模型被诱导读取私钥、
+再经由「结论」输出，就构成完整的凭据外泄链路。详见
+[`docs/INTERVIEW.md`](./docs/INTERVIEW.md) 第五节的实测记录。
 
 ## 事件流与审计
 
@@ -437,7 +515,7 @@ class BaseModelAdapter(Protocol):
 ## 测试
 
 ```bash
-# 全量测试
+# 全量测试（全部离线可跑：不联网、不连主机、不需要 API Key）
 pytest
 
 # 覆盖率报告
@@ -446,17 +524,39 @@ pytest --cov=ops_agent --cov-report=term-missing
 # 静态检查
 ruff check .
 mypy src
+
+# 前端类型检查
+cd desktop && npm run typecheck
 ```
 
 当前状态：
 
 | 指标 | 数值 |
 | :--- | :--- |
-| 测试用例 | **129 passed** |
-| 覆盖率 | **89%** |
-| 静态检查 | `ruff` 全绿 |
+| 测试用例 | **198 passed** |
+| 覆盖率 | **87%**（权限层 L1/L3、`pipeline.py` 达 100%） |
+| Python 源码 | 45 文件 / 4,362 行 |
+| 前端 + Rust | 2,423 + 464 行 |
+| 静态检查 | `ruff` 全绿；`tsc --noEmit` 通过 |
+
+测试分层：
+
+| 层次 | 数量 | 说明 |
+| :--- | :--- | :--- |
+| 权限层 | 73 | 表驱动，**专门覆盖绕过变形写法** |
+| 内核 | 16 | 插件拓扑排序、能力解析、卸载撤销 |
+| 工具 | 12 | 假 SSH 连接（按命令首词返回预置输出） |
+| 桥接协议 | 36 | 分帧、取消、脱敏、分发（纯内存） |
+| 桥接集成 | 21 | **真组装 Kernel** 跑通 run / checkCommand / permission |
+| sidecar 端到端 | 12 | **真起子进程**，走 stdin/stdout 对话 |
+| 会话 / 上下文 / CLI | 28 | 落盘完整性、压缩、命令行入口 |
 
 权限层测试**必须包含绕过尝试**（如 `rm -rf /` 的各种变形写法）；Agent Loop 测试使用 **Mock LLM**，不依赖真实 API。
+
+> **测试全部离线**是这个项目的一条硬约束：`ssh/fake.py` 预置了
+> `df` / `free` / `ps` / `ls` / `journalctl` 的样例输出，按命令首词匹配。
+> 因此 CI 里不需要任何主机或密钥，断言还能精确到数据内容
+> （`assert "19G" in output`）。
 
 ## 设计参考
 
@@ -476,11 +576,21 @@ mypy src
 - [x] 上下文压缩（保留近期 + 超长输出截断）
 - [x] DeepSeek 适配器 + 离线 Mock 适配器
 - [x] CLI（`--check-command` / `--show-permission` / `--dry-run`）
+- [x] 桌面客户端（Tauri + React + stdio JSON-RPC 桥接层）
+- [x] 桥接层测试：协议 / 集成 / **sidecar 真进程端到端**
+- [ ] **L5 路径范围限制** ← 当前最大安全缺口，见[已知安全边界](#已知安全边界)
 - [ ] L4 高危操作人工确认交互
-- [ ] L5 路径范围限制
+- [ ] 权限层从字符串正则升级为**结构化命令解析**（消除 `cat /etc/passwd` 类误伤）
 - [ ] 多模型适配器（OpenAI / Qwen）
 - [ ] Subagent 支持
 - [ ] MCP 协议接入
+- [ ] Rust / 前端接入 CI
+
+## 相关文档
+
+- **[docs/INTERVIEW.md](docs/INTERVIEW.md)** —— 项目亮点、技术难点与实测安全记录
+- **[desktop/README.md](desktop/README.md)** —— 桌面客户端的架构与通信协议
+- **[AGENTS.md](AGENTS.md)** —— AI Agent 协作开发约束（安全红线、架构原则）
 
 ## 贡献
 

@@ -184,14 +184,3 @@ class BaseModelAdapter(Protocol):
 **最后更新**：项目初始化时创建  
 **维护者**：项目作者  
 **适用 Agent**：Claude Code / Cursor / Cline / 其他代码 Agent
-
----
-
-## 使用说明
-
-这两份文件的分工是：
-
-- **README.md** 面向**人类读者**（面试官、协作者），讲清楚项目是什么、为什么这样设计、怎么用。
-- **AGENTS.md** 面向**AI Agent**（Claude Code、Cursor 等），讲清楚开发约束、安全红线、架构原则。
-
-建议你先从 **Kernel + SSH 工具插件 + L1/L2 权限层** 这三个最小闭环开始，跑通后再逐步扩展。每加一个插件就更新一次 README 的路线图，这样项目推进过程本身就是一份可展示的工程日志。

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OpsAgent",
+  "version": "0.1.0",
+  "identifier": "com.luomicx.opsagent",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5183",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "OpsAgent · 只读运维诊断",
+        "width": 1360,
+        "height": 880,
+        "minWidth": 1080,
+        "minHeight": 680,
+        "resizable": true,
+        "center": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": ["icons/icon.ico"],
+    "shortDescription": "基于 SSH 的智能运维 Agent 桌面客户端",
+    "longDescription": "在严格权限控制下自动执行只读诊断类运维任务的桌面客户端。所有工具调用经分层权限校验，全过程写入可审计事件流。"
+  }
+}
